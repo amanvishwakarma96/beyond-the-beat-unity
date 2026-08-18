@@ -73,6 +73,8 @@ BeyondTheBeat-Phase0-<build>.apk
 
 It must be accompanied by a completed validation report based on `Docs/Validation/PHASE_0_VALIDATION.md`.
 
+The PR must record enough evidence for another person to verify exactly what was tested: artifact name/location, commit SHA, device used, validation status, known issues, and any relevant screenshots/video links when available.
+
 ## Phase 0 Implementation Order
 
 1. Bootstrap the Unity URP mobile project.
@@ -165,7 +167,9 @@ A Phase 0 implementation PR should explain:
 - Performance observations
 - Validation result (PASS / PASS WITH KNOWN ISSUES / FAIL)
 - Shareable artifact name/version and location
+- Validated commit SHA
 - Device(s) used for validation
+- Optional screenshot/video evidence when useful
 - Explicit confirmation that Phase 1+ scope was not introduced
 
 Do not mark the Phase PR ready for review until the shareable build has been produced and the validation report is complete.
