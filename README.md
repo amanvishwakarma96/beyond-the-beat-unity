@@ -16,6 +16,36 @@ Current focus:
 
 Phase 0 intentionally excludes missions, save systems, survival, ocean exploration, economy, and networking.
 
+## Required Delivery Workflow
+
+Every phase must finish with validation and a shareable artifact before the next phase begins.
+
+```text
+Implementation
+   ↓
+Editor Validation
+   ↓
+Android Device Validation
+   ↓
+Shareable APK / Build Artifact
+   ↓
+Validation Report
+   ↓
+PR Ready for Review
+   ↓
+Merge
+   ↓
+Next Phase
+```
+
+For Phase 0, the expected minimum shareable artifact is an installable Android APK such as:
+
+```text
+BeyondTheBeat-Phase0-<build>.apk
+```
+
+Build binaries are not committed to normal Git history. The artifact location, validated commit SHA, device details, validation status, and known issues must be referenced from the Phase PR. See the Development Guide and Phase 0 Validation Report for the full gate.
+
 ## Design Pillars
 
 1. **One world, many contexts** — gameplay mechanics activate from world context rather than separate mini-games.
@@ -81,7 +111,9 @@ Docs/
 ├── GAME_DESIGN.md
 ├── ROADMAP.md
 ├── ARCHITECTURE.md
-└── DEVELOPMENT.md
+├── DEVELOPMENT.md
+└── Validation/
+    └── PHASE_0_VALIDATION.md
 ```
 
 ## Documentation
@@ -90,6 +122,7 @@ Docs/
 - [Roadmap](Docs/ROADMAP.md)
 - [Architecture](Docs/ARCHITECTURE.md)
 - [Development Guide](Docs/DEVELOPMENT.md)
+- [Phase 0 Validation Report](Docs/Validation/PHASE_0_VALIDATION.md)
 
 ## Platform & Performance Direction
 
