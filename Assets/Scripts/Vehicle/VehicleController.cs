@@ -60,11 +60,12 @@ namespace BeyondTheBeat.Vehicle
         private float currentSteerAngle;
 
         public float CurrentSpeedKph { get; private set; }
+
         public bool IsGrounded =>
-            frontLeftCollider != null && frontLeftCollider.isGrounded ||
-            frontRightCollider != null && frontRightCollider.isGrounded ||
-            rearLeftCollider != null && rearLeftCollider.isGrounded ||
-            rearRightCollider != null && rearRightCollider.isGrounded;
+            (frontLeftCollider != null && frontLeftCollider.isGrounded) ||
+            (frontRightCollider != null && frontRightCollider.isGrounded) ||
+            (rearLeftCollider != null && rearLeftCollider.isGrounded) ||
+            (rearRightCollider != null && rearRightCollider.isGrounded);
 
         private void Awake()
         {
@@ -145,28 +146,33 @@ namespace BeyondTheBeat.Vehicle
             bool requestingForward = throttleInput > 0.01f;
             bool requestingReverse = throttleInput < -0.01f;
             bool changingDirection =
-                requestingForward && movingBackward ||
-                requestingReverse && movingForward;
+                (requestingForward && movingBackward) ||
+                (requestingReverse && movingForward);
 
             float appliedBrakeTorque = brakeInput * brakeTorque;
-            float appliedMotorTorque = 0f;
+            float requestedAxleTorque = 0f;
 
-            if (changingDirection)
+            if (brakeInput > 0.01f)
+            {
+                // Explicit braking always wins over throttle input.
+            }
+            else if (changingDirection)
             {
                 appliedBrakeTorque = Mathf.Max(appliedBrakeTorque, directionChangeBrakeTorque);
             }
             else if (requestingForward && CurrentSpeedKph < maxForwardSpeedKph)
             {
-                appliedMotorTorque = throttleInput * motorTorque;
+                requestedAxleTorque = throttleInput * motorTorque;
             }
             else if (requestingReverse && CurrentSpeedKph < maxReverseSpeedKph)
             {
-                appliedMotorTorque = throttleInput * motorTorque;
+                requestedAxleTorque = throttleInput * motorTorque;
             }
 
             // Rear-wheel drive keeps the prototype easy to reason about while the front wheels steer.
-            rearLeftCollider.motorTorque = appliedMotorTorque;
-            rearRightCollider.motorTorque = appliedMotorTorque;
+            float torquePerDrivenWheel = requestedAxleTorque * 0.5f;
+            rearLeftCollider.motorTorque = torquePerDrivenWheel;
+            rearRightCollider.motorTorque = torquePerDrivenWheel;
             frontLeftCollider.motorTorque = 0f;
             frontRightCollider.motorTorque = 0f;
 
