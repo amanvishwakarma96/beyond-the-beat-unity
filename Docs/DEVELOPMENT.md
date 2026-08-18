@@ -22,6 +22,57 @@ feature/phase-0-prototype
 
 Keep early development simple. Additional feature branches should only be introduced when parallel work or isolated review provides clear value.
 
+## Required Delivery Workflow
+
+Every phase follows the same gated workflow:
+
+1. **Implement** — complete only the scope defined for the current phase.
+2. **Developer validation** — verify compilation, scene references, core functional behavior, and regression risks in the Unity Editor.
+3. **Device validation** — run the current playable loop on a representative Android device and record functional/performance observations.
+4. **Produce shareable artifact** — generate an installable Android APK (or later platform-equivalent build) for stakeholders/testers.
+5. **Create validation report** — record build identity, device/environment, test cases, results, known issues, performance observations, and pass/fail status.
+6. **PR review** — update the pull request with validation evidence and the artifact location before marking it ready for review.
+7. **Merge** — merge only after current-phase exit criteria pass.
+8. **Advance phase** — start the next phase only after the previous phase has a validated, shareable build.
+
+The workflow is therefore:
+
+```text
+Implement
+   ↓
+Editor Validation
+   ↓
+Android Device Validation
+   ↓
+Shareable APK / Build Artifact
+   ↓
+Validation Report
+   ↓
+PR Ready for Review
+   ↓
+Merge
+   ↓
+Next Phase
+```
+
+### Shareable Artifact Rule
+
+Compiled builds such as `.apk`, `.aab`, and platform packages remain excluded from normal Git commits through `.gitignore`.
+
+A phase artifact should instead be shared through an appropriate build/release mechanism, such as:
+
+- GitHub Actions artifact when CI build automation is introduced
+- GitHub Release/pre-release attachment
+- Other approved temporary distribution location referenced from the PR
+
+For **Phase 0**, the minimum shareable artifact is:
+
+```text
+BeyondTheBeat-Phase0-<build>.apk
+```
+
+It must be accompanied by a completed validation report based on `Docs/Validation/PHASE_0_VALIDATION.md`.
+
 ## Phase 0 Implementation Order
 
 1. Bootstrap the Unity URP mobile project.
@@ -32,8 +83,9 @@ Keep early development simple. Additional feature branches should only be introd
 6. Create reusable interaction foundation.
 7. Implement the parking-zone example.
 8. Add minimal interaction/prompt UI.
-9. Produce and test an Android build.
-10. Tune handling and validate Phase 0 exit criteria.
+9. Produce the Android shareable artifact and perform device validation.
+10. Complete the validation report, tune handling, and validate Phase 0 exit criteria.
+11. Update the draft PR with artifact + validation evidence and mark it ready for review only after validation passes.
 
 ## Definition of Done — Phase 0
 
@@ -44,6 +96,9 @@ Phase 0 is complete when:
 - Mobile controls can drive the same input abstraction as editor testing.
 - The vehicle can enter a parking zone, stop, receive interaction feedback, and complete the interaction.
 - The prototype runs acceptably on a representative mid-range Android device.
+- A shareable Android APK has been produced and successfully installed/tested.
+- `Docs/Validation/PHASE_0_VALIDATION.md` is completed with test results and known issues.
+- The PR references the validated artifact and validation evidence.
 - No Phase 1+ systems have been prematurely implemented.
 
 ## Coding Guidelines
@@ -65,6 +120,23 @@ Phase 0 is complete when:
 - Profile CPU, GPU, memory, and garbage collection as content grows.
 - Prefer scalable assets and settings suitable for URP/mobile.
 
+## Validation Guidelines
+
+Validation should cover at minimum:
+
+- Project opens and compiles without errors.
+- Prototype scene loads without missing references.
+- Vehicle accelerates, brakes/reverses, and steers correctly.
+- Vehicle physics remains stable during normal prototype driving.
+- Camera remains usable without major jitter.
+- Touch steering/throttle/brake can be used simultaneously as required.
+- Parking prompt appears only when valid.
+- Moving vehicle cannot incorrectly complete parking.
+- Valid stopped vehicle can complete parking once per interaction cycle.
+- Leaving the zone resets/cancels the interaction correctly.
+- Android build installs and launches successfully.
+- No blocking crash, exception, or obvious continuous GC/performance issue occurs during the validation session.
+
 ## Commit Guidance
 
 Use concise, intent-based commit messages. Examples:
@@ -77,6 +149,7 @@ feat: add parking interaction
 feat: add mobile driving controls
 fix: stabilize low-speed steering
 perf: reduce prototype scene allocations
+test: document phase 0 device validation
 ```
 
 Avoid combining unrelated gameplay, documentation, and large asset changes in one commit when practical.
@@ -90,8 +163,13 @@ A Phase 0 implementation PR should explain:
 - Vehicle tuning defaults
 - Known handling limitations
 - Performance observations
+- Validation result (PASS / PASS WITH KNOWN ISSUES / FAIL)
+- Shareable artifact name/version and location
+- Device(s) used for validation
 - Explicit confirmation that Phase 1+ scope was not introduced
+
+Do not mark the Phase PR ready for review until the shareable build has been produced and the validation report is complete.
 
 ## Phase Progression Rule
 
-Do not advance simply because the code exists. The current phase must be playable and validated against its exit criteria before the next phase begins.
+Do not advance simply because the code exists. The current phase must be playable, validated against its exit criteria, and available as a shareable build artifact before the next phase begins.
