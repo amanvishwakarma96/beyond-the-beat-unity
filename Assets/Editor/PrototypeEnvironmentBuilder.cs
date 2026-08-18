@@ -39,7 +39,6 @@ namespace BeyondTheBeat.Editor
             Material markerMaterial = GetOrCreateMaterial(MarkerMaterialPath, new Color(0.12f, 0.48f, 0.86f));
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-            scene.name = "Phase0_Prototype";
 
             CreateLighting();
             CreateReferenceCamera();
