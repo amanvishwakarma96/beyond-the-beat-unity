@@ -77,10 +77,10 @@ namespace BeyondTheBeat.Editor
             SetObjectReference(serializedController, "frontRightCollider", frontRight.Collider);
             SetObjectReference(serializedController, "rearLeftCollider", rearLeft.Collider);
             SetObjectReference(serializedController, "rearRightCollider", rearRight.Collider);
-            SetObjectReference(serializedController, "frontLeftVisual", frontLeft.Visual);
-            SetObjectReference(serializedController, "frontRightVisual", frontRight.Visual);
-            SetObjectReference(serializedController, "rearLeftVisual", rearLeft.Visual);
-            SetObjectReference(serializedController, "rearRightVisual", rearRight.Visual);
+            SetObjectReference(serializedController, "frontLeftVisual", frontLeft.VisualRoot);
+            SetObjectReference(serializedController, "frontRightVisual", frontRight.VisualRoot);
+            SetObjectReference(serializedController, "rearLeftVisual", rearLeft.VisualRoot);
+            SetObjectReference(serializedController, "rearRightVisual", rearRight.VisualRoot);
             serializedController.ApplyModifiedPropertiesWithoutUndo();
 
             controller.ReapplyTuning();
@@ -187,16 +187,21 @@ namespace BeyondTheBeat.Editor
             wheelCollider.mass = 28f;
             wheelCollider.suspensionDistance = 0.22f;
 
-            GameObject visualObject = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            visualObject.name = name + "WheelVisual";
-            visualObject.transform.SetParent(parent, false);
-            visualObject.transform.localPosition = localPosition;
-            visualObject.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
-            visualObject.transform.localScale = new Vector3(0.34f, 0.12f, 0.34f);
-            AssignMaterial(visualObject, material);
-            RemoveCollider(visualObject);
+            // WheelCollider.GetWorldPose drives this root. The mesh correction lives on a child,
+            // so applying the collider pose does not erase the cylinder's 90-degree axle rotation.
+            GameObject visualRoot = new GameObject(name + "WheelVisual");
+            visualRoot.transform.SetParent(parent, false);
+            visualRoot.transform.localPosition = localPosition;
 
-            return new WheelAssembly(wheelCollider, visualObject.transform);
+            GameObject visualMesh = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            visualMesh.name = "Mesh";
+            visualMesh.transform.SetParent(visualRoot.transform, false);
+            visualMesh.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            visualMesh.transform.localScale = new Vector3(0.34f, 0.12f, 0.34f);
+            AssignMaterial(visualMesh, material);
+            RemoveCollider(visualMesh);
+
+            return new WheelAssembly(wheelCollider, visualRoot.transform);
         }
 
         private static bool ValidateControllerReferences(VehicleController controller)
@@ -307,14 +312,14 @@ namespace BeyondTheBeat.Editor
 
         private readonly struct WheelAssembly
         {
-            public WheelAssembly(WheelCollider collider, Transform visual)
+            public WheelAssembly(WheelCollider collider, Transform visualRoot)
             {
                 Collider = collider;
-                Visual = visual;
+                VisualRoot = visualRoot;
             }
 
             public WheelCollider Collider { get; }
-            public Transform Visual { get; }
+            public Transform VisualRoot { get; }
         }
     }
 }
