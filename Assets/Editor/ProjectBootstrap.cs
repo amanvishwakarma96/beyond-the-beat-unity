@@ -35,7 +35,7 @@ namespace BeyondTheBeat.Editor
         [MenuItem("Beyond The Beat/Project/Validate Bootstrap")]
         private static void ValidateBootstrap()
         {
-            bool editorVersionMatches = Application.unityVersion.StartsWith("2022.3.76f1", StringComparison.Ordinal);
+            bool editorVersionMatches = Application.unityVersion.StartsWith("6000.5.9f1", StringComparison.Ordinal);
             bool urpAssigned = GraphicsSettings.defaultRenderPipeline is UniversalRenderPipelineAsset;
             bool landscapeOnly =
                 PlayerSettings.defaultInterfaceOrientation == UIOrientation.AutoRotation &&
@@ -110,7 +110,7 @@ namespace BeyondTheBeat.Editor
             {
                 UnityEngine.Object.DestroyImmediate(pipelineAsset);
                 AssetDatabase.DeleteAsset(RendererAssetPath);
-                throw new InvalidOperationException("URP 14 renderer serialization layout was not found.");
+                throw new InvalidOperationException("URP renderer serialization layout was not found for the selected Unity version.");
             }
 
             rendererDataList.arraySize = 1;

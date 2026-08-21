@@ -74,8 +74,6 @@ namespace BeyondTheBeat.Editor
             SetObjectReference(serializedInput, "interactButton", interact);
             serializedInput.ApplyModifiedPropertiesWithoutUndo();
 
-            // MobileDrivingInput owns both touch and editor keyboard fallback for this scene.
-            // Disable the earlier standalone debug adapter so two components never race to SetInput().
             VehicleDebugInput debugInput = vehicle.GetComponent<VehicleDebugInput>();
             if (debugInput != null)
             {
@@ -114,6 +112,7 @@ namespace BeyondTheBeat.Editor
                 EventSystem eventSystem = validationScene.GetRootGameObjects()
                     .SelectMany(root => root.GetComponentsInChildren<EventSystem>(true))
                     .FirstOrDefault();
+                MobileDrivingInput input = null;
 
                 bool vehiclePass = vehicle != null && vehicle.TryGetComponent<VehicleController>(out _);
                 bool canvasPass = canvasObject != null &&
@@ -122,8 +121,8 @@ namespace BeyondTheBeat.Editor
                                   canvasObject.TryGetComponent<CanvasScaler>(out _) &&
                                   canvasObject.TryGetComponent<GraphicRaycaster>(out _);
 
-                bool inputPass = canvasPass && canvasObject.TryGetComponent(out MobileDrivingInput input);
-                bool controlsPass = inputPass && ValidateInputReferences(input);
+                bool inputPass = canvasPass && canvasObject.TryGetComponent(out input);
+                bool controlsPass = inputPass && input != null && ValidateInputReferences(input);
                 bool fiveButtonsPass = canvasPass && canvasObject.GetComponentsInChildren<TouchHoldButton>(true).Length == 5;
                 bool eventSystemPass = eventSystem != null && eventSystem.GetComponent<InputSystemUIInputModule>() != null;
 

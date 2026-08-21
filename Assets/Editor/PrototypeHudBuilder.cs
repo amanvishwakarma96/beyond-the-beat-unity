@@ -135,13 +135,15 @@ namespace BeyondTheBeat.Editor
                 GameObject vehicle = FindRootObject(validationScene, VehicleName);
                 Transform hudTransform = canvasObject != null ? canvasObject.transform.Find(HudRootName) : null;
                 GameObject hudRoot = hudTransform != null ? hudTransform.gameObject : null;
+                InteractionController controller = null;
+                UIManager uiManager = null;
 
                 bool canvasPass = canvasObject != null && canvasObject.TryGetComponent<Canvas>(out _);
-                bool controllerPass = vehicle != null && vehicle.TryGetComponent<InteractionController>(out InteractionController controller);
-                bool hudPass = hudRoot != null && hudRoot.TryGetComponent<UIManager>(out UIManager uiManager);
+                bool controllerPass = vehicle != null && vehicle.TryGetComponent(out controller);
+                bool hudPass = hudRoot != null && hudRoot.TryGetComponent(out uiManager);
                 bool promptPass = hudPass && hudRoot.transform.Find(PromptPanelName) != null;
                 bool feedbackPass = hudPass && hudRoot.transform.Find(FeedbackPanelName) != null;
-                bool referencesPass = hudPass && ValidateUiReferences(uiManager, controller);
+                bool referencesPass = hudPass && uiManager != null && controller != null && ValidateUiReferences(uiManager, controller);
                 bool initiallyHiddenPass = promptPass && feedbackPass &&
                                            !hudRoot.transform.Find(PromptPanelName).gameObject.activeSelf &&
                                            !hudRoot.transform.Find(FeedbackPanelName).gameObject.activeSelf;

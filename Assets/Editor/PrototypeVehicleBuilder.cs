@@ -120,13 +120,15 @@ namespace BeyondTheBeat.Editor
             try
             {
                 GameObject vehicle = FindRootObject(validationScene, VehicleName);
+                VehicleController controller = null;
+
                 bool vehiclePass = vehicle != null;
                 bool rigidbodyPass = vehiclePass && vehicle.TryGetComponent(out Rigidbody body) && Mathf.Abs(body.mass - 1250f) < 0.1f;
-                bool controllerPass = vehiclePass && vehicle.TryGetComponent(out VehicleController controller);
+                bool controllerPass = vehiclePass && vehicle.TryGetComponent(out controller);
                 bool debugInputPass = vehiclePass && vehicle.TryGetComponent<VehicleDebugInput>(out _);
                 bool wheelCountPass = vehiclePass && vehicle.GetComponentsInChildren<WheelCollider>(true).Length == 4;
                 bool prefabPass = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null;
-                bool referencesPass = controllerPass && ValidateControllerReferences(controller);
+                bool referencesPass = controllerPass && controller != null && ValidateControllerReferences(controller);
 
                 bool allPass =
                     vehiclePass &&
@@ -187,8 +189,6 @@ namespace BeyondTheBeat.Editor
             wheelCollider.mass = 28f;
             wheelCollider.suspensionDistance = 0.22f;
 
-            // WheelCollider.GetWorldPose drives this root. The mesh correction lives on a child,
-            // so applying the collider pose does not erase the cylinder's 90-degree axle rotation.
             GameObject visualRoot = new GameObject(name + "WheelVisual");
             visualRoot.transform.SetParent(parent, false);
             visualRoot.transform.localPosition = localPosition;

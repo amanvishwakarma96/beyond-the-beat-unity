@@ -11,7 +11,11 @@
 - Unity version:
 - Render pipeline: URP
 - Build date:
+- GitHub Actions run URL:
+- Artifact name:
 - Artifact location:
+- APK SHA-256:
+- APK size (bytes):
 
 ## Test Environment
 
@@ -56,6 +60,7 @@ Choose one:
 | Interaction reset | Leaving/re-entering zone resets correctly | ⬜ | ⬜ | |
 | APK install | Build installs successfully | N/A | ⬜ | |
 | APK launch | Build launches without blocking error/crash | N/A | ⬜ | |
+| APK checksum | SHA-256 matches uploaded manifest | N/A | ⬜ | |
 
 ## Performance Observations
 
@@ -104,9 +109,12 @@ Confirm that no future-phase systems were introduced:
 
 - [ ] APK generated successfully
 - [ ] APK filename includes phase/build identity
+- [ ] APK checksum matches `SHA256SUMS.txt`
+- [ ] `Phase0-Artifact-Manifest.txt` matches the APK and commit SHA
 - [ ] APK installs on validation device
 - [ ] APK launches successfully
 - [ ] Artifact is shared outside normal Git history
+- [ ] GitHub Actions run/artifact location is recorded above
 - [ ] Artifact location is added to the Phase 0 PR
 - [ ] Commit SHA in this report matches the validated build
 

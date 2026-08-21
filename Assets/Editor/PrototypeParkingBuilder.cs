@@ -108,19 +108,20 @@ namespace BeyondTheBeat.Editor
                 GameObject root = FindRootObject(validationScene, ParkingRootName);
                 Transform zoneTransform = root != null ? root.transform.Find(ParkingZoneName) : null;
                 GameObject zoneObject = zoneTransform != null ? zoneTransform.gameObject : null;
+                ParkingZone parkingZone = null;
 
                 bool vehiclePass = vehicle != null && vehicle.TryGetComponent<InteractionController>(out _);
                 bool rootPass = root != null;
-                bool zonePass = zoneObject != null && zoneObject.TryGetComponent(out ParkingZone parkingZone);
+                bool zonePass = zoneObject != null && zoneObject.TryGetComponent(out parkingZone);
                 bool triggerPass = zoneObject != null &&
                                    zoneObject.TryGetComponent(out BoxCollider trigger) &&
                                    trigger.isTrigger &&
                                    Approximately(trigger.size, TriggerSize) &&
                                    zoneObject.TryGetComponent<InteractionTrigger>(out _);
 
-                bool promptPass = zonePass && parkingZone.PromptText == "Park Here";
-                bool thresholdPass = zonePass && Mathf.Abs(parkingZone.StopThresholdKph - 2f) < 0.01f;
-                bool feedbackPass = zonePass && parkingZone.SuccessMessage == "Parked successfully";
+                bool promptPass = zonePass && parkingZone != null && parkingZone.PromptText == "Park Here";
+                bool thresholdPass = zonePass && parkingZone != null && Mathf.Abs(parkingZone.StopThresholdKph - 2f) < 0.01f;
+                bool feedbackPass = zonePass && parkingZone != null && parkingZone.SuccessMessage == "Parked successfully";
                 bool positionPass = zoneObject != null && Approximately(zoneObject.transform.position, ParkingPosition);
 
                 bool allPass = vehiclePass && rootPass && zonePass && triggerPass && promptPass && thresholdPass && feedbackPass && positionPass;
