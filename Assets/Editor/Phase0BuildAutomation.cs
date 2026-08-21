@@ -1,5 +1,7 @@
 using System;
+using System.IO;
 using UnityEditor;
+using UnityEditor.Build.Reporting;
 using UnityEngine;
 
 namespace BeyondTheBeat.Editor
@@ -7,6 +9,7 @@ namespace BeyondTheBeat.Editor
     internal static class Phase0BuildAutomation
     {
         private const string ScenePath = "Assets/Scenes/Prototype/Phase0_Prototype.unity";
+        private const string AndroidApplicationId = "com.beyondthebeat.prototype";
 
         private static readonly string[] BuildSteps =
         {
@@ -35,10 +38,32 @@ namespace BeyondTheBeat.Editor
         private static int capturedErrors;
 
         /// <summary>
-        /// CI entry point used before the Android build.
-        /// Generates the complete Phase 0 prototype from the repository's editor builders,
-        /// runs every structural validator, and leaves exactly the generated prototype scene
-        /// enabled in Build Settings. This method intentionally does not create an APK.
+        /// GameCI build entry point.
+        /// Generates the complete Phase 0 prototype, runs all structural validators,
+        /// and produces a Unity Development Android APK at GameCI's customBuildPath.
+        /// </summary>
+        public static void BuildAndroid()
+        {
+            Application.logMessageReceived += CaptureLog;
+
+            try
+            {
+                PreparePrototypeInternal();
+                BuildDevelopmentAndroidApk();
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+                throw;
+            }
+            finally
+            {
+                Application.logMessageReceived -= CaptureLog;
+            }
+        }
+
+        /// <summary>
+        /// Optional editor/CI preparation entry point when an APK is not required.
         /// </summary>
         public static void PreparePrototype()
         {
@@ -46,63 +71,149 @@ namespace BeyondTheBeat.Editor
 
             try
             {
-                Debug.Log("[Beyond The Beat] Starting Phase 0 CI prototype preparation.");
-
-                for (int i = 0; i < BuildSteps.Length; i++)
-                {
-                    ExecuteMenuStep(BuildSteps[i]);
-                }
-
-                for (int i = 0; i < ValidationSteps.Length; i++)
-                {
-                    ExecuteMenuStep(ValidationSteps[i]);
-                }
-
-                SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-                if (sceneAsset == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Phase 0 preparation completed without producing the required scene at '{ScenePath}'.");
-                }
-
-                EditorBuildSettings.scenes = new[]
-                {
-                    new EditorBuildSettingsScene(ScenePath, true)
-                };
-
-                PlayerSettings.productName = "Beyond The Beat";
-                PlayerSettings.companyName = "Beyond The Beat";
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.beyondthebeat.prototype");
-                EditorUserBuildSettings.buildAppBundle = false;
-
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-
-                Debug.Log(
-                    "[Beyond The Beat] Phase 0 CI preparation PASS. " +
-                    $"Scene '{ScenePath}' is generated, validated, and enabled for build.");
-
-                if (Application.isBatchMode)
-                {
-                    EditorApplication.Exit(0);
-                }
+                PreparePrototypeInternal();
             }
             catch (Exception exception)
             {
                 Debug.LogException(exception);
-
-                if (Application.isBatchMode)
-                {
-                    EditorApplication.Exit(1);
-                    return;
-                }
-
                 throw;
             }
             finally
             {
                 Application.logMessageReceived -= CaptureLog;
             }
+        }
+
+        private static void PreparePrototypeInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 0 CI prototype preparation.");
+
+            for (int i = 0; i < BuildSteps.Length; i++)
+            {
+                ExecuteMenuStep(BuildSteps[i]);
+            }
+
+            for (int i = 0; i < ValidationSteps.Length; i++)
+            {
+                ExecuteMenuStep(ValidationSteps[i]);
+            }
+
+            SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+            if (sceneAsset == null)
+            {
+                throw new InvalidOperationException(
+                    $"Phase 0 preparation completed without producing the required scene at '{ScenePath}'.");
+            }
+
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+
+            PlayerSettings.productName = "Beyond The Beat";
+            PlayerSettings.companyName = "Beyond The Beat";
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, AndroidApplicationId);
+            EditorUserBuildSettings.buildAppBundle = false;
+
+            ApplyVersionFromCommandLine();
+
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            Debug.Log(
+                "[Beyond The Beat] Phase 0 CI preparation PASS. " +
+                $"Scene '{ScenePath}' is generated, validated, and enabled for build.");
+        }
+
+        private static void BuildDevelopmentAndroidApk()
+        {
+            string outputPath = GetCommandLineArgument("customBuildPath");
+            if (string.IsNullOrWhiteSpace(outputPath))
+            {
+                outputPath = Path.GetFullPath(
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase0-local.apk"));
+            }
+
+            if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
+            {
+                outputPath += ".apk";
+            }
+
+            string outputDirectory = Path.GetDirectoryName(outputPath);
+            if (string.IsNullOrWhiteSpace(outputDirectory))
+            {
+                throw new InvalidOperationException($"Unable to resolve APK output directory from '{outputPath}'.");
+            }
+
+            Directory.CreateDirectory(outputDirectory);
+
+            EditorUserBuildSettings.buildAppBundle = false;
+            PlayerSettings.Android.useCustomKeystore = false;
+
+            BuildPlayerOptions options = new BuildPlayerOptions
+            {
+                scenes = new[] { ScenePath },
+                locationPathName = outputPath,
+                target = BuildTarget.Android,
+                options = BuildOptions.Development
+            };
+
+            Debug.Log($"[Beyond The Beat] Building Phase 0 development APK: {outputPath}");
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+
+            if (summary.result != BuildResult.Succeeded)
+            {
+                throw new InvalidOperationException(
+                    $"Phase 0 Android build failed with result {summary.result}. " +
+                    $"Errors: {summary.totalErrors}, warnings: {summary.totalWarnings}.");
+            }
+
+            if (!File.Exists(outputPath))
+            {
+                throw new FileNotFoundException(
+                    "Unity reported a successful Android build but the APK was not found.",
+                    outputPath);
+            }
+
+            Debug.Log(
+                "[Beyond The Beat] Phase 0 Android APK build PASS. " +
+                $"Output: {outputPath}, size: {summary.totalSize} bytes, " +
+                $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
+        }
+
+        private static void ApplyVersionFromCommandLine()
+        {
+            string buildVersion = GetCommandLineArgument("buildVersion");
+            if (!string.IsNullOrWhiteSpace(buildVersion))
+            {
+                PlayerSettings.bundleVersion = buildVersion;
+            }
+
+            string androidVersionCode = GetCommandLineArgument("androidVersionCode");
+            int versionCode;
+            if (!string.IsNullOrWhiteSpace(androidVersionCode) &&
+                int.TryParse(androidVersionCode, out versionCode) &&
+                versionCode > 0)
+            {
+                PlayerSettings.Android.bundleVersionCode = versionCode;
+            }
+        }
+
+        private static string GetCommandLineArgument(string name)
+        {
+            string expected = "-" + name;
+            string[] args = Environment.GetCommandLineArgs();
+
+            for (int i = 0; i < args.Length - 1; i++)
+            {
+                if (string.Equals(args[i], expected, StringComparison.OrdinalIgnoreCase))
+                {
+                    return args[i + 1];
+                }
+            }
+
+            return string.Empty;
         }
 
         private static void ExecuteMenuStep(string menuPath)
