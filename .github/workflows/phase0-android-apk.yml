@@ -2,6 +2,14 @@ name: Phase 0 Android APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/phase-0-android-artifact
+    paths:
+      - '.github/workflows/phase0-android-apk.yml'
+      - 'Assets/**'
+      - 'Packages/**'
+      - 'ProjectSettings/**'
 
 permissions:
   contents: read
