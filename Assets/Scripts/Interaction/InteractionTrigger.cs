@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,6 +10,9 @@ namespace BeyondTheBeat.Interaction
         [SerializeField] private InteractableObject interactable;
 
         private readonly Dictionary<InteractionController, int> overlapCounts = new Dictionary<InteractionController, int>(2);
+
+        public event Action<GameObject> ActorEntered;
+        public event Action<GameObject> ActorExited;
 
         private void Awake()
         {
@@ -41,6 +45,7 @@ namespace BeyondTheBeat.Interaction
             if (count == 0)
             {
                 controller.Register(interactable);
+                ActorEntered?.Invoke(controller.gameObject);
             }
         }
 
@@ -63,6 +68,7 @@ namespace BeyondTheBeat.Interaction
             {
                 overlapCounts.Remove(controller);
                 controller.Unregister(interactable);
+                ActorExited?.Invoke(controller.gameObject);
             }
             else
             {
@@ -77,6 +83,7 @@ namespace BeyondTheBeat.Interaction
                 if (entry.Key != null && interactable != null)
                 {
                     entry.Key.Unregister(interactable);
+                    ActorExited?.Invoke(entry.Key.gameObject);
                 }
             }
 
