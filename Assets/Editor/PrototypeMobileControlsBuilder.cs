@@ -215,7 +215,7 @@ namespace BeyondTheBeat.Editor
             if (eventSystem == null)
             {
                 GameObject eventObject = new GameObject(EventSystemName);
-                eventSystem = eventObject.AddComponent<EventSystem>();
+                eventObject.AddComponent<EventSystem>();
                 eventObject.AddComponent<InputSystemUIInputModule>();
                 return;
             }
@@ -223,7 +223,7 @@ namespace BeyondTheBeat.Editor
             BaseInputModule[] modules = eventSystem.GetComponents<BaseInputModule>();
             foreach (BaseInputModule module in modules)
             {
-                if (module is not InputSystemUIInputModule)
+                if (!(module is InputSystemUIInputModule))
                 {
                     UnityEngine.Object.DestroyImmediate(module);
                 }
