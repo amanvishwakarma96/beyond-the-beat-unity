@@ -93,19 +93,25 @@ jobs:
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
             echo "::error::Unity completed without a discoverable APK under build/."
-            find build -maxdepth 4 -type f -print || true
+            find build -maxdepth 5 -type f -print || true
             exit 1
           fi
 
-          APK_DIR="$(dirname "${APK_PATH}")"
-          APK_FILE="$(basename "${APK_PATH}")"
-          APK_SIZE_BYTES="$(stat -c%s "${APK_PATH}")"
-          APK_SHA256="$(sha256sum "${APK_PATH}" | awk '{print $1}')"
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase0"
+          rm -rf "${STAGE_DIR}"
+          mkdir -p "${STAGE_DIR}"
+
+          APK_FILE="BeyondTheBeat-Phase0-${GITHUB_RUN_NUMBER}.apk"
+          STAGED_APK="${STAGE_DIR}/${APK_FILE}"
+          cp "${APK_PATH}" "${STAGED_APK}"
+
+          APK_SIZE_BYTES="$(stat -c%s "${STAGED_APK}")"
+          APK_SHA256="$(sha256sum "${STAGED_APK}" | awk '{print $1}')"
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
 
-          printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${APK_DIR}/SHA256SUMS.txt"
+          printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
 
-          cat > "${APK_DIR}/Phase0-Artifact-Manifest.txt" <<EOF
+          cat > "${STAGE_DIR}/Phase0-Artifact-Manifest.txt" <<EOF
           Beyond The Beat — Phase 0 Android Artifact
           Artifact name: BeyondTheBeat-Phase0-${GITHUB_RUN_NUMBER}
           APK file: ${APK_FILE}
@@ -115,7 +121,7 @@ jobs:
           Workflow checkout SHA: ${GITHUB_SHA}
           Git ref: ${GITHUB_REF}
           GitHub Actions run: ${RUN_URL}
-          Unity version: 6000.5.9f1
+          Unity version: 2022.3.62f1
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
@@ -124,19 +130,21 @@ jobs:
           must still be recorded in Docs/Validation/PHASE_0_VALIDATION.md.
           EOF
 
-          echo "apk_path=${APK_PATH}" >> "${GITHUB_OUTPUT}"
-          echo "apk_dir=${APK_DIR}" >> "${GITHUB_OUTPUT}"
-          echo "artifact_name=BeyondTheBeat-Phase0-${GITHUB_RUN_NUMBER}" >> "${GITHUB_OUTPUT}"
-          echo "sha256=${APK_SHA256}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "artifact_name=BeyondTheBeat-Phase0-${GITHUB_RUN_NUMBER}"
+            echo "apk_file=${APK_FILE}"
+            echo "apk_path=artifact/Phase0/${APK_FILE}"
+            echo "sha256=${APK_SHA256}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Upload shareable APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.manifest.outputs.artifact_name }}
           path: |
-            ${{ steps.manifest.outputs.apk_path }}
-            ${{ steps.manifest.outputs.apk_dir }}/Phase0-Artifact-Manifest.txt
-            ${{ steps.manifest.outputs.apk_dir }}/SHA256SUMS.txt
+            artifact/Phase0/BeyondTheBeat-Phase0-${{ github.run_number }}.apk
+            artifact/Phase0/Phase0-Artifact-Manifest.txt
+            artifact/Phase0/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
