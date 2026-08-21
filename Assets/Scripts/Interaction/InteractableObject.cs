@@ -11,10 +11,12 @@ namespace BeyondTheBeat.Interaction
 
         private bool isInteracting;
         private bool hasCompleted;
+        private GameObject currentActor;
 
         public string PromptText => promptText;
         public bool IsInteracting => isInteracting;
         public bool HasCompleted => hasCompleted;
+        public GameObject CurrentActor => currentActor;
 
         public event Action<InteractableObject, GameObject> InteractionRequested;
         public event Action<InteractableObject, GameObject> InteractionCompleted;
@@ -42,9 +44,25 @@ namespace BeyondTheBeat.Interaction
                 return false;
             }
 
+            currentActor = actor;
             isInteracting = true;
             InteractionRequested?.Invoke(this, actor);
             OnInteractionRequested(actor);
+            return true;
+        }
+
+        public bool CancelInteraction(GameObject actor)
+        {
+            if (!isInteracting)
+            {
+                return false;
+            }
+
+            GameObject cancelledActor = currentActor != null ? currentActor : actor;
+            isInteracting = false;
+            currentActor = null;
+            OnInteractionCancelled(cancelledActor);
+            InteractionCancelled?.Invoke(this, cancelledActor);
             return true;
         }
 
@@ -65,6 +83,10 @@ namespace BeyondTheBeat.Interaction
 
         protected abstract void OnInteractionRequested(GameObject actor);
 
+        protected virtual void OnInteractionCancelled(GameObject actor)
+        {
+        }
+
         protected void CompleteInteraction(GameObject actor)
         {
             if (!isInteracting)
@@ -72,25 +94,19 @@ namespace BeyondTheBeat.Interaction
                 return;
             }
 
+            GameObject completedActor = currentActor != null ? currentActor : actor;
             isInteracting = false;
             hasCompleted = true;
-            InteractionCompleted?.Invoke(this, actor);
-        }
-
-        protected void CancelInteraction(GameObject actor)
-        {
-            if (!isInteracting)
-            {
-                return;
-            }
-
-            isInteracting = false;
-            InteractionCancelled?.Invoke(this, actor);
+            currentActor = null;
+            InteractionCompleted?.Invoke(this, completedActor);
         }
 
         protected virtual void OnDisable()
         {
-            isInteracting = false;
+            if (isInteracting)
+            {
+                CancelInteraction(currentActor);
+            }
         }
     }
 }
