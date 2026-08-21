@@ -39,6 +39,16 @@ namespace BeyondTheBeat.Interaction
         private void OnDisable()
         {
             UnsubscribeFromInput();
+
+            for (int i = 0; i < candidates.Count; i++)
+            {
+                InteractableObject candidate = candidates[i];
+                if (candidate != null && candidate.IsInteracting)
+                {
+                    candidate.CancelInteraction(actor);
+                }
+            }
+
             candidates.Clear();
             SetActiveInteractable(null);
         }
@@ -80,6 +90,11 @@ namespace BeyondTheBeat.Interaction
             if (interactable == null)
             {
                 return;
+            }
+
+            if (interactable.IsInteracting)
+            {
+                interactable.CancelInteraction(actor);
             }
 
             candidates.Remove(interactable);
