@@ -38,13 +38,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           if [[ -z "${UNITY_LICENSE:-}" && -z "${UNITY_SERIAL:-}" ]]; then
-            echo "::error::Configure either UNITY_LICENSE (Personal/manual license) or UNITY_SERIAL with UNITY_EMAIL and UNITY_PASSWORD before running this workflow."
+            echo "::error::Configure UNITY_LICENSE for Unity Personal, or UNITY_SERIAL for a paid Unity license."
             exit 1
           fi
 
-          if [[ -n "${UNITY_SERIAL:-}" && ( -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ) ]]; then
-            echo "::error::UNITY_SERIAL builds also require UNITY_EMAIL and UNITY_PASSWORD."
+          if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
+            echo "::error::GameCI Unity Builder requires UNITY_EMAIL and UNITY_PASSWORD together with UNITY_LICENSE/UNITY_SERIAL for activation. If your Unity account uses Google sign-in, create/reset a direct Unity ID password for the same email and store it only as a GitHub Actions secret."
             exit 1
           fi
 
