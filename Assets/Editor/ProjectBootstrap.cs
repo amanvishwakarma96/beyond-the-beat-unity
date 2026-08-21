@@ -35,7 +35,7 @@ namespace BeyondTheBeat.Editor
         [MenuItem("Beyond The Beat/Project/Validate Bootstrap")]
         private static void ValidateBootstrap()
         {
-            bool editorVersionMatches = Application.unityVersion.StartsWith("2022.3.76f1", StringComparison.Ordinal);
+            bool editorVersionMatches = Application.unityVersion.StartsWith("2022.3.62f1", StringComparison.Ordinal);
             bool urpAssigned = GraphicsSettings.defaultRenderPipeline is UniversalRenderPipelineAsset;
             bool landscapeOnly =
                 PlayerSettings.defaultInterfaceOrientation == UIOrientation.AutoRotation &&
