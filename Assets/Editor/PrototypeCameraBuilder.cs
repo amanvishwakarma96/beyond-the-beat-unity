@@ -88,11 +88,12 @@ namespace BeyondTheBeat.Editor
             {
                 GameObject vehicle = FindRootObject(validationScene, VehicleName);
                 GameObject cameraObject = FindRootObject(validationScene, CameraName);
+                CameraFollow follow = null;
 
                 bool vehiclePass = vehicle != null;
                 bool cameraPass = cameraObject != null && cameraObject.TryGetComponent<Camera>(out _);
-                bool followPass = cameraObject != null && cameraObject.TryGetComponent(out CameraFollow follow);
-                bool targetPass = followPass && follow.Target == vehicle?.transform;
+                bool followPass = cameraObject != null && cameraObject.TryGetComponent(out follow);
+                bool targetPass = followPass && follow != null && follow.Target == vehicle?.transform;
                 bool mainCameraPass = cameraObject != null && cameraObject.CompareTag("MainCamera");
                 bool audioListenerPass =
                     cameraObject != null &&
