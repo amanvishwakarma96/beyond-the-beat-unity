@@ -86,16 +86,37 @@ jobs:
         run: |
           set -euo pipefail
 
-          APK_PATH="$(find build -type f -name 'BeyondTheBeat-Phase0-${{ github.run_number }}.apk' -print -quit)"
+          EXPECTED_APK="BeyondTheBeat-Phase0-${GITHUB_RUN_NUMBER}.apk"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" \
+            -type f \
+            -name "${EXPECTED_APK}" \
+            -not -path "${GITHUB_WORKSPACE}/artifact/*" \
+            -not -path "${GITHUB_WORKSPACE}/Library/*" \
+            -print -quit)"
+
           if [[ -z "${APK_PATH}" ]]; then
-            APK_PATH="$(find build -type f -name '*.apk' -print -quit)"
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" \
+              -type f \
+              -name '*.apk' \
+              -not -path "${GITHUB_WORKSPACE}/artifact/*" \
+              -not -path "${GITHUB_WORKSPACE}/Library/*" \
+              -print -quit)"
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
-            echo "::error::Unity completed without a discoverable APK under build/."
-            find build -maxdepth 5 -type f -print || true
+            echo "::error::Unity completed without a discoverable APK in the GitHub workspace."
+            echo "Workspace APK candidates:"
+            find "${GITHUB_WORKSPACE}" \
+              -type f \
+              -name '*.apk' \
+              -not -path "${GITHUB_WORKSPACE}/Library/*" \
+              -print || true
+            echo "Workspace files (depth <= 6):"
+            find "${GITHUB_WORKSPACE}" -maxdepth 6 -type f -print | sort || true
             exit 1
           fi
+
+          echo "Resolved Unity APK: ${APK_PATH}"
 
           STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase0"
           rm -rf "${STAGE_DIR}"
@@ -123,6 +144,7 @@ jobs:
           GitHub Actions run: ${RUN_URL}
           Unity version: 2022.3.62f1
           Build type: Unity Development APK
+          Unity APK source: ${APK_PATH}
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
           IMPORTANT: Artifact generation does not equal Android device validation.
