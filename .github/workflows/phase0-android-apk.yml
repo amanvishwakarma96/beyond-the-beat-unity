@@ -10,6 +10,7 @@ on:
       - 'Assets/**'
       - 'Packages/**'
       - 'ProjectSettings/**'
+      - 'Docs/Validation/**'
 
 permissions:
   contents: read
@@ -29,6 +30,7 @@ jobs:
       UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
       UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
       UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
     steps:
       - name: Checkout repository
@@ -109,10 +111,11 @@ jobs:
           APK file: ${APK_FILE}
           APK size (bytes): ${APK_SIZE_BYTES}
           SHA-256: ${APK_SHA256}
-          Commit SHA: ${GITHUB_SHA}
+          Source commit SHA: ${SOURCE_SHA}
+          Workflow checkout SHA: ${GITHUB_SHA}
           Git ref: ${GITHUB_REF}
           GitHub Actions run: ${RUN_URL}
-          Unity version: 2022.3.62f1
+          Unity version: 6000.5.9f1
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
@@ -146,7 +149,8 @@ jobs:
             echo
             echo "- Artifact: \`${{ steps.manifest.outputs.artifact_name }}\`"
             echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
-            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- Source commit: \`${SOURCE_SHA}\`"
+            echo "- Workflow checkout: \`${GITHUB_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo "- Status: APK generated; real Android device validation is still required."
           } >> "${GITHUB_STEP_SUMMARY}"
