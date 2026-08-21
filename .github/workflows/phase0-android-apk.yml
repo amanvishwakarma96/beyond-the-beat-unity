@@ -112,7 +112,7 @@ jobs:
           Commit SHA: ${GITHUB_SHA}
           Git ref: ${GITHUB_REF}
           GitHub Actions run: ${RUN_URL}
-          Unity version: 2022.3.76f1
+          Unity version: 2022.3.62f1
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
