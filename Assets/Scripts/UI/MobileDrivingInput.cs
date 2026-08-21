@@ -43,6 +43,11 @@ namespace BeyondTheBeat.UI
                 ApplyKeyboardFallback(ref steering, ref throttle, ref brake, ref interactPressed);
             }
 
+            if (brake > 0.01f)
+            {
+                throttle = 0f;
+            }
+
             Steering = Mathf.Clamp(steering, -1f, 1f);
             Throttle = Mathf.Clamp(throttle, -1f, 1f);
             Brake = Mathf.Clamp01(brake);
