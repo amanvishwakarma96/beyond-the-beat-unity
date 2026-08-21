@@ -49,22 +49,7 @@ jobs:
             Library-Phase0-Android-
             Library-
 
-      - name: Generate and validate Phase 0 prototype
-        uses: game-ci/unity-builder@v5.0.0
-        env:
-          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
-          UNITY_EMAIL: ${{ env.UNITY_EMAIL }}
-          UNITY_PASSWORD: ${{ env.UNITY_PASSWORD }}
-          UNITY_SERIAL: ${{ env.UNITY_SERIAL }}
-        with:
-          targetPlatform: Android
-          unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase0BuildAutomation.PreparePrototype
-          manualExit: true
-          versioning: None
-          allowDirtyBuild: true
-
-      - name: Build Android development APK
+      - name: Generate, validate, and build Android development APK
         id: unity-build
         uses: game-ci/unity-builder@v5.0.0
         env:
@@ -75,6 +60,7 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
+          buildMethod: BeyondTheBeat.Editor.Phase0BuildAutomation.BuildAndroid
           buildName: BeyondTheBeat-Phase0-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
@@ -82,7 +68,6 @@ jobs:
           androidVersionCode: ${{ github.run_number }}
           androidExportType: androidPackage
           allowDirtyBuild: true
-          customParameters: -developmentBuild
 
       - name: Create artifact manifest and checksum
         id: manifest
@@ -119,7 +104,7 @@ jobs:
           Git ref: ${GITHUB_REF}
           GitHub Actions run: ${RUN_URL}
           Unity version: 2022.3.76f1
-          Build type: Development APK
+          Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
           IMPORTANT: Artifact generation does not equal Android device validation.
