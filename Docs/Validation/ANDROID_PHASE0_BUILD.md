@@ -4,6 +4,14 @@ This document is the execution runbook for **Issue #9 — Produce Android protot
 
 The Android milestone is complete only when a generated APK is installed and validated on a real Android device. A successful GitHub Actions build alone is **not** a Phase 0 validation pass.
 
+## Unity version used by CI
+
+Phase 0 CI is pinned to:
+
+`Unity 2022.3.62f1 (4af31df58517)`
+
+This is intentionally kept on the standard Unity 2022.3 LTS line that works with Unity Personal. Later 2022.3 Extended/3-year LTS releases such as 2022.3.76f1 require Unity Enterprise or Unity Industry and must not be used by this Personal-license workflow.
+
 ## What the CI workflow does
 
 Workflow:
@@ -53,17 +61,19 @@ The manifest records:
 
 ## One-time GitHub Actions setup
 
-The workflow needs a valid Unity license configuration in repository Actions secrets.
+GameCI v5 needs repository Actions secrets for both account authentication and license activation.
 
-Use one of the supported approaches:
+### Unity Personal
 
-### Unity Personal / manual license
+Configure all three:
 
-Configure:
+- `UNITY_LICENSE` — complete contents of the locally activated `Unity_lic.ulf`
+- `UNITY_EMAIL` — Unity ID email
+- `UNITY_PASSWORD` — direct Unity ID password
 
-- `UNITY_LICENSE`
+If the Unity account normally uses Google sign-in, create/reset a direct Unity ID password for that same email and store it only in GitHub Actions secrets.
 
-### Unity serial-based license
+### Unity serial-based paid license
 
 Configure:
 
@@ -166,8 +176,6 @@ Record all results in `Docs/Validation/PHASE_0_VALIDATION.md`.
 
 ## Performance observations
 
-Issue #9 requires practical observations, not a laboratory benchmark.
-
 Record at minimum:
 
 - device model
@@ -185,8 +193,6 @@ Record at minimum:
 For Phase 0, the target is usable prototype performance on a representative mid-range Android device. Final tuning is handled in Issue #10.
 
 ## Required evidence before Issue #9 closes
-
-All of the following must exist:
 
 - [ ] GitHub Actions workflow completed successfully
 - [ ] Shareable APK artifact exists
