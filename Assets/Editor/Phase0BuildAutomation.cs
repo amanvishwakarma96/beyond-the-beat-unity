@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace BeyondTheBeat.Editor
 {
-    internal static class Phase0BuildAutomation
+    public static class Phase0BuildAutomation
     {
         private const string ScenePath = "Assets/Scenes/Prototype/Phase0_Prototype.unity";
         private const string AndroidApplicationId = "com.beyondthebeat.prototype";
