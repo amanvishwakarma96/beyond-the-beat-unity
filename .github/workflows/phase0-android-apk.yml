@@ -129,6 +129,7 @@ jobs:
           APK_SIZE_BYTES="$(stat -c%s "${STAGED_APK}")"
           APK_SHA256="$(sha256sum "${STAGED_APK}" | awk '{print $1}')"
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/{print $2; exit}' "${GITHUB_WORKSPACE}/ProjectSettings/ProjectVersion.txt")"
 
           printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
 
@@ -142,7 +143,7 @@ jobs:
           Workflow checkout SHA: ${GITHUB_SHA}
           Git ref: ${GITHUB_REF}
           GitHub Actions run: ${RUN_URL}
-          Unity version: 2022.3.62f1
+          Unity version: ${UNITY_VERSION}
           Build type: Unity Development APK
           Unity APK source: ${APK_PATH}
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
