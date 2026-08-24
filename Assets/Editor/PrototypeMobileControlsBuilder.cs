@@ -24,10 +24,12 @@ namespace BeyondTheBeat.Editor
         {
             if (Application.isBatchMode)
             {
+                AssetDatabase.SaveAssets();
                 if (!EditorSceneManager.SaveOpenScenes())
                 {
-                    Debug.LogError("[Beyond The Beat] Failed to save open scenes before building mobile controls in batch mode.");
-                    return;
+                    Debug.LogWarning(
+                        "[Beyond The Beat] Could not save the transient open scene before building mobile controls in batch mode. " +
+                        "Continuing because the persisted prototype scene is reopened from disk.");
                 }
             }
             else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
