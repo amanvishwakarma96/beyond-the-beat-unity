@@ -227,25 +227,25 @@ namespace BeyondTheBeat.Editor
 
             if (Application.isBatchMode)
             {
-                // Close all open scenes and create a new empty one to ensure a clean state
+                // In batch mode, wrap scene operations in try-catch to handle failures gracefully
                 try
                 {
+                    // Close all open scenes and create a new empty one to ensure a clean state
                     EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                    
+                    // Now save the empty scene state
+                    if (!EditorSceneManager.SaveOpenScenes())
+                    {
+                        Debug.LogWarning(
+                            $"[Beyond The Beat] Warning: Could not save scene state before menu command '{menuPath}'. " +
+                            "Continuing execution...");
+                    }
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[Beyond The Beat] Warning: Could not create empty scene: {ex.Message}");
-                }
-
-                // Attempt to save any remaining open scenes
-                try
-                {
-                    EditorSceneManager.SaveOpenScenes();
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning($"[Beyond The Beat] Warning: Could not save open scenes before menu command '{menuPath}': {ex.Message}. Continuing execution...");
-                    // Continue execution - the menu step may not require saved scenes
+                    Debug.LogWarning(
+                        $"[Beyond The Beat] Warning: Exception while preparing scene for menu command '{menuPath}': {ex.Message}. " +
+                        "Continuing execution...");
                 }
 
                 AssetDatabase.SaveAssets();
