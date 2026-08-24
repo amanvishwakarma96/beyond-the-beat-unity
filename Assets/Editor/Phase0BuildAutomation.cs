@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace BeyondTheBeat.Editor
@@ -36,6 +38,7 @@ namespace BeyondTheBeat.Editor
         };
 
         private static int capturedErrors;
+        private static readonly List<string> capturedErrorMessages = new List<string>();
 
         /// <summary>
         /// GameCI build entry point.
@@ -219,7 +222,34 @@ namespace BeyondTheBeat.Editor
         private static void ExecuteMenuStep(string menuPath)
         {
             capturedErrors = 0;
+            capturedErrorMessages.Clear();
             Debug.Log($"[Beyond The Beat] CI step: {menuPath}");
+
+            if (Application.isBatchMode)
+            {
+                // Close all open scenes and create a new empty one to ensure a clean state
+                try
+                {
+                    EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Beyond The Beat] Warning: Could not create empty scene: {ex.Message}");
+                }
+
+                // Attempt to save any remaining open scenes
+                try
+                {
+                    EditorSceneManager.SaveOpenScenes();
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Beyond The Beat] Warning: Could not save open scenes before menu command '{menuPath}': {ex.Message}. Continuing execution...");
+                    // Continue execution - the menu step may not require saved scenes
+                }
+
+                AssetDatabase.SaveAssets();
+            }
 
             bool executed = EditorApplication.ExecuteMenuItem(menuPath);
             if (!executed)
@@ -229,17 +259,27 @@ namespace BeyondTheBeat.Editor
 
             if (capturedErrors > 0)
             {
+                string details = capturedErrorMessages.Count == 0
+                    ? string.Empty
+                    : "\n" + string.Join("\n---\n", capturedErrorMessages);
+
                 throw new InvalidOperationException(
-                    $"Unity menu command reported {capturedErrors} error(s): {menuPath}");
+                    $"Unity menu command reported {capturedErrors} error(s): {menuPath}.{details}");
             }
         }
 
         private static void CaptureLog(string condition, string stackTrace, LogType type)
         {
-            if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+            if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert)
             {
-                capturedErrors++;
+                return;
             }
+
+            capturedErrors++;
+            capturedErrorMessages.Add(
+                string.IsNullOrWhiteSpace(stackTrace)
+                    ? condition
+                    : $"{condition}\n{stackTrace}");
         }
     }
 }
