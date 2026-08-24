@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace BeyondTheBeat.Editor
@@ -262,6 +263,17 @@ namespace BeyondTheBeat.Editor
             capturedErrors = 0;
             capturedErrorMessages.Clear();
             Debug.Log($"[Beyond The Beat] CI step: {menuPath}");
+
+            if (Application.isBatchMode)
+            {
+                if (!EditorSceneManager.SaveOpenScenes())
+                {
+                    throw new InvalidOperationException(
+                        $"Unity could not save open scenes before CI menu command: {menuPath}");
+                }
+
+                AssetDatabase.SaveAssets();
+            }
 
             bool executed = EditorApplication.ExecuteMenuItem(menuPath);
             if (!executed)
