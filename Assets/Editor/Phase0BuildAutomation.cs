@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
@@ -36,6 +37,7 @@ namespace BeyondTheBeat.Editor
         };
 
         private static int capturedErrors;
+        private static readonly List<string> capturedErrorMessages = new List<string>();
 
         /// <summary>
         /// GameCI build entry point.
@@ -219,6 +221,7 @@ namespace BeyondTheBeat.Editor
         private static void ExecuteMenuStep(string menuPath)
         {
             capturedErrors = 0;
+            capturedErrorMessages.Clear();
             Debug.Log($"[Beyond The Beat] CI step: {menuPath}");
 
             bool executed = EditorApplication.ExecuteMenuItem(menuPath);
@@ -229,17 +232,27 @@ namespace BeyondTheBeat.Editor
 
             if (capturedErrors > 0)
             {
+                string details = capturedErrorMessages.Count == 0
+                    ? string.Empty
+                    : "\n" + string.Join("\n---\n", capturedErrorMessages);
+
                 throw new InvalidOperationException(
-                    $"Unity menu command reported {capturedErrors} error(s): {menuPath}");
+                    $"Unity menu command reported {capturedErrors} error(s): {menuPath}.{details}");
             }
         }
 
         private static void CaptureLog(string condition, string stackTrace, LogType type)
         {
-            if (type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+            if (type != LogType.Error && type != LogType.Exception && type != LogType.Assert)
             {
-                capturedErrors++;
+                return;
             }
+
+            capturedErrors++;
+            capturedErrorMessages.Add(
+                string.IsNullOrWhiteSpace(stackTrace)
+                    ? condition
+                    : $"{condition}\n{stackTrace}");
         }
     }
 }
