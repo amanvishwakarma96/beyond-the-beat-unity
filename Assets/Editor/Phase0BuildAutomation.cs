@@ -178,10 +178,49 @@ namespace BeyondTheBeat.Editor
                     outputPath);
             }
 
+            string stagedPath = StageApkInsideProject(outputPath);
+
             Debug.Log(
                 "[Beyond The Beat] Phase 0 Android APK build PASS. " +
-                $"Output: {outputPath}, size: {summary.totalSize} bytes, " +
+                $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
+        }
+
+        private static string StageApkInsideProject(string outputPath)
+        {
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            if (string.IsNullOrWhiteSpace(projectRoot))
+            {
+                throw new InvalidOperationException("Unable to resolve the Unity project root while staging the Android APK.");
+            }
+
+            string apkFileName = Path.GetFileName(outputPath);
+            if (string.IsNullOrWhiteSpace(apkFileName))
+            {
+                throw new InvalidOperationException($"Unable to resolve the APK file name from '{outputPath}'.");
+            }
+
+            string stageDirectory = Path.Combine(projectRoot, "build", "Android");
+            Directory.CreateDirectory(stageDirectory);
+
+            string stagedPath = Path.Combine(stageDirectory, apkFileName);
+            string sourceFullPath = Path.GetFullPath(outputPath);
+            string stagedFullPath = Path.GetFullPath(stagedPath);
+
+            if (!string.Equals(sourceFullPath, stagedFullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                File.Copy(sourceFullPath, stagedFullPath, true);
+            }
+
+            if (!File.Exists(stagedFullPath))
+            {
+                throw new FileNotFoundException(
+                    "The Android APK could not be staged inside the Unity project workspace.",
+                    stagedFullPath);
+            }
+
+            Debug.Log($"[Beyond The Beat] Staged CI APK inside project workspace: {stagedFullPath}");
+            return stagedFullPath;
         }
 
         private static void ApplyVersionFromCommandLine()
