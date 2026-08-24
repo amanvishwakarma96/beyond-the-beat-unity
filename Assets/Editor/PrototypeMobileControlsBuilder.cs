@@ -200,7 +200,7 @@ namespace BeyondTheBeat.Editor
             text.resizeTextMaxSize = 36;
             text.color = Color.white;
             text.raycastTarget = false;
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             return buttonObject.GetComponent<TouchHoldButton>();
         }
