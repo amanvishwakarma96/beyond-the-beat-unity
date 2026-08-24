@@ -22,7 +22,15 @@ namespace BeyondTheBeat.Editor
         [MenuItem("Beyond The Beat/Phase 0/Build Mobile Driving Controls")]
         private static void BuildMobileDrivingControls()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (Application.isBatchMode)
+            {
+                if (!EditorSceneManager.SaveOpenScenes())
+                {
+                    Debug.LogError("[Beyond The Beat] Failed to save open scenes before building mobile controls in batch mode.");
+                    return;
+                }
+            }
+            else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 return;
             }
