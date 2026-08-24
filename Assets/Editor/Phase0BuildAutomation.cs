@@ -272,7 +272,7 @@ namespace BeyondTheBeat.Editor
                     // transient editor state a hard prerequisite for deterministic menu steps.
                     EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
-                    if (EditorSceneManager.GetSceneCount() > 0 && !EditorSceneManager.SaveOpenScenes())
+                    if (UnityEngine.SceneManagement.SceneManager.sceneCount > 0 && !EditorSceneManager.SaveOpenScenes())
                     {
                         Debug.LogWarning(
                             $"[Beyond The Beat] Could not save transient scene state before CI menu command '{menuPath}'. " +
