@@ -55,10 +55,11 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Phase0-Android-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
-          restore-keys: |
-            Library-Phase0-Android-
-            Library-
+          # The Library contains compiled Editor assemblies. Key it to the actual C#
+          # source set so renamed/deleted builders can never survive from an older run.
+          # Deliberately do not use restore-keys: a partial fallback can restore stale
+          # Assembly-CSharp-Editor output and make CI execute code absent from HEAD.
+          key: Library-Phase0-Android-v2-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
       - name: Generate, validate, and build Android development APK
         id: unity-build
