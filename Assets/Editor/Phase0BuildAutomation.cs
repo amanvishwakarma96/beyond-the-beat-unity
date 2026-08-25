@@ -5,6 +5,7 @@ using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace BeyondTheBeat.Editor
 {
@@ -262,9 +263,7 @@ namespace BeyondTheBeat.Editor
         {
             if (Application.isBatchMode)
             {
-                // Never create or save an untitled scene here. SaveOpenScenes on an
-                // untitled scene opens a Save Scene dialog, which cannot be handled by
-                // Unity in batch mode and was the source of the CI failure.
+                SaveDirtyPersistedScenesForBatchMode();
                 AssetDatabase.SaveAssets();
             }
 
@@ -286,6 +285,24 @@ namespace BeyondTheBeat.Editor
 
                 throw new InvalidOperationException(
                     $"Unity menu command reported {capturedErrors} error(s): {menuPath}.{details}");
+            }
+        }
+
+        private static void SaveDirtyPersistedScenesForBatchMode()
+        {
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                Scene scene = SceneManager.GetSceneAt(i);
+                if (!scene.IsValid() || !scene.isDirty || string.IsNullOrWhiteSpace(scene.path))
+                {
+                    continue;
+                }
+
+                if (!EditorSceneManager.SaveScene(scene))
+                {
+                    throw new InvalidOperationException(
+                        $"Unable to save dirty scene '{scene.path}' before the next CI menu step.");
+                }
             }
         }
 
