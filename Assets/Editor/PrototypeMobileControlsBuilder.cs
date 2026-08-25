@@ -24,13 +24,10 @@ namespace BeyondTheBeat.Editor
         {
             if (Application.isBatchMode)
             {
+                // Never call SaveOpenScenes in CI. If an untitled scene is open Unity
+                // attempts to show a Save Scene dialog, which batch mode cannot answer.
+                // This builder always reopens the persisted prototype scene below.
                 AssetDatabase.SaveAssets();
-                if (!EditorSceneManager.SaveOpenScenes())
-                {
-                    Debug.LogWarning(
-                        "[Beyond The Beat] Could not save the transient open scene before building mobile controls in batch mode. " +
-                        "Continuing because the persisted prototype scene is reopened from disk.");
-                }
             }
             else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
