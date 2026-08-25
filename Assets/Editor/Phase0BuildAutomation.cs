@@ -260,34 +260,17 @@ namespace BeyondTheBeat.Editor
 
         private static void ExecuteMenuStep(string menuPath)
         {
+            if (Application.isBatchMode)
+            {
+                // Never create or save an untitled scene here. SaveOpenScenes on an
+                // untitled scene opens a Save Scene dialog, which cannot be handled by
+                // Unity in batch mode and was the source of the CI failure.
+                AssetDatabase.SaveAssets();
+            }
+
             capturedErrors = 0;
             capturedErrorMessages.Clear();
             Debug.Log($"[Beyond The Beat] CI step: {menuPath}");
-
-            if (Application.isBatchMode)
-            {
-                try
-                {
-                    // CI can start with an unsaved/untitled editor scene. Do not make that
-                    // transient editor state a hard prerequisite for deterministic menu steps.
-                    EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-
-                    if (UnityEngine.SceneManagement.SceneManager.sceneCount > 0 && !EditorSceneManager.SaveOpenScenes())
-                    {
-                        Debug.LogWarning(
-                            $"[Beyond The Beat] Could not save transient scene state before CI menu command '{menuPath}'. " +
-                            "Continuing with a clean scene.");
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning(
-                        $"[Beyond The Beat] Could not prepare a clean scene before CI menu command '{menuPath}': {ex.Message}. " +
-                        "Continuing execution.");
-                }
-
-                AssetDatabase.SaveAssets();
-            }
 
             bool executed = EditorApplication.ExecuteMenuItem(menuPath);
             if (!executed)
