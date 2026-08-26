@@ -6,11 +6,15 @@ The Android milestone is complete only when a generated APK is installed and val
 
 ## Unity version used by CI
 
-Phase 0 CI is pinned to:
+The workflow reads the Unity editor version from:
 
-`Unity 2022.3.62f1 (4af31df58517)`
+`ProjectSettings/ProjectVersion.txt`
 
-This is intentionally kept on the standard Unity 2022.3 LTS line that works with Unity Personal. Later 2022.3 Extended/3-year LTS releases such as 2022.3.76f1 require Unity Enterprise or Unity Industry and must not be used by this Personal-license workflow.
+The current Phase 0 baseline is:
+
+`Unity 6000.5.9f1`
+
+Keep the workflow and this runbook aligned with `ProjectVersion.txt`; do not hard-code an older editor version in validation notes.
 
 ## What the CI workflow does
 
@@ -32,6 +36,52 @@ The workflow:
 
 The generated Unity scene/assets are CI workspace output. They are not fabricated or manually committed as Unity YAML by this workflow.
 
+## Development-build validation telemetry
+
+Phase 0 development builds automatically create a small top-left validation overlay after the scene loads. It is intentionally excluded from non-development builds.
+
+The overlay reports:
+
+- current/min/max sampled FPS
+- worst observed frame time
+- count of frames at or above the configured stutter threshold (50 ms by default)
+- generation 0/1/2 GC collection deltas during the session
+- allocated/reserved Unity memory
+- current vehicle speed
+- elapsed validation-session time
+
+At startup the app also logs:
+
+- device model
+- Android/OS version string
+- CPU type
+- system RAM
+- GPU and reported GPU memory
+- current resolution
+- Unity version
+
+A metrics snapshot is logged every 15 seconds with the prefix:
+
+`[Beyond The Beat] Phase 0 validation metrics:`
+
+This telemetry is evidence-support tooling only. It does not replace the tester's functional judgement about touch responsiveness, vehicle feel, camera readability, parking reliability, thermal behavior, or obvious stutter.
+
+### Optional ADB log capture
+
+Linux/macOS example:
+
+```bash
+adb logcat | grep "Beyond The Beat"
+```
+
+Windows example:
+
+```powershell
+adb logcat | findstr "Beyond The Beat"
+```
+
+Capture the startup device summary and at least one metrics snapshot if practical. Record the relevant observations in `Docs/Validation/PHASE_0_VALIDATION.md`.
+
 ## Artifact naming
 
 The GitHub Actions artifact is named:
@@ -52,45 +102,25 @@ The manifest records:
 - APK filename
 - APK byte size
 - SHA-256
-- exact commit SHA
-- Git ref
+- exact source commit SHA
+- workflow checkout SHA/ref
 - GitHub Actions run URL
 - Unity version
 - build type
 - UTC generation time
 
-## One-time GitHub Actions setup
+## GitHub Actions setup
 
-GameCI v5 needs repository Actions secrets for both account authentication and license activation.
+GameCI requires repository Actions secrets for Unity authentication/license activation. Use the credential set appropriate for the Unity license attached to the project/account.
 
-### Unity Personal
-
-Configure all three:
-
-- `UNITY_LICENSE` — complete contents of the locally activated `Unity_lic.ulf`
-- `UNITY_EMAIL` — Unity ID email
-- `UNITY_PASSWORD` — direct Unity ID password
-
-If the Unity account normally uses Google sign-in, create/reset a direct Unity ID password for that same email and store it only in GitHub Actions secrets.
-
-### Unity serial-based paid license
-
-Configure:
-
-- `UNITY_SERIAL`
-- `UNITY_EMAIL`
-- `UNITY_PASSWORD`
-
-Do not commit license contents, account credentials, keystores, or passwords to the repository.
+Do not commit license contents, account credentials, keystores, passwords, or other secrets to the repository.
 
 ## Run the build
-
-After this workflow exists on the default branch:
 
 1. Open the repository on GitHub.
 2. Open **Actions**.
 3. Select **Phase 0 Android APK**.
-4. Choose **Run workflow**.
+4. Choose **Run workflow**, or use the run produced by the validation pull request when the workflow is configured for that event.
 5. Select the commit/ref intended for validation.
 6. Run the workflow.
 7. Confirm the `Build shareable Phase 0 APK` job succeeds.
@@ -134,6 +164,7 @@ Record all results in `Docs/Validation/PHASE_0_VALIDATION.md`.
 - APK installs successfully.
 - App launches without a blocking crash.
 - Prototype scene is visible.
+- Phase 0 validation overlay appears in the top-left of the Development build.
 - No obvious missing-reference or broken-render-pipeline behavior is present.
 
 ### Touch driving
@@ -183,9 +214,11 @@ Record at minimum:
 - chipset/SoC if known
 - RAM if known
 - screen resolution/refresh rate
-- approximate FPS range
-- obvious frame drops/stutter
-- obvious GC-related pauses
+- overlay min/typical/max FPS after representative driving
+- overlay worst frame time and stutter-frame count
+- overlay GC generation collection deltas
+- approximate allocated/reserved memory observed
+- obvious frame drops/stutter that were perceptible to the tester
 - touch/input latency concerns
 - physics/camera jitter
 - thermal behavior during the test
@@ -202,6 +235,7 @@ For Phase 0, the target is usable prototype performance on a representative mid-
 - [ ] Exact commit SHA is recorded
 - [ ] APK installed on a real Android device
 - [ ] APK launched successfully
+- [ ] Validation overlay/device summary is available in the Development build
 - [ ] Touch drive loop validated
 - [ ] Parking loop validated
 - [ ] Performance observations recorded
