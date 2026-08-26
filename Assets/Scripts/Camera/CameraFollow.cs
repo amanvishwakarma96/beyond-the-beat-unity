@@ -8,26 +8,33 @@ namespace BeyondTheBeat.CameraSystem
         [SerializeField] private Transform target;
 
         [Header("Follow Position")]
-        [SerializeField, Min(0.5f)] private float followDistance = 6.5f;
-        [SerializeField, Min(0.1f)] private float followHeight = 3.4f;
+        [SerializeField, Min(0.5f)] private float followDistance = 6.8f;
+        [SerializeField, Min(0.1f)] private float followHeight = 3.6f;
         [SerializeField, Min(0f)] private float lateralOffset = 0f;
-        [SerializeField, Min(0f)] private float lookAheadDistance = 2.0f;
-        [SerializeField, Min(0f)] private float lookAtHeight = 1.1f;
+        [SerializeField, Min(0f)] private float lookAheadDistance = 2.2f;
+        [SerializeField, Min(0f)] private float lookAtHeight = 1.15f;
 
         [Header("Smoothing")]
-        [SerializeField, Min(0.01f)] private float positionSmoothTime = 0.16f;
-        [SerializeField, Min(0.01f)] private float rotationDamping = 8f;
+        [SerializeField, Min(0.01f)] private float positionSmoothTime = 0.18f;
+        [SerializeField, Min(0.01f)] private float rotationDamping = 7.5f;
         [SerializeField, Min(0f)] private float maxPositionSpeed = 60f;
 
         [Header("Heading")]
-        [SerializeField, Range(0f, 1f)] private float targetUpInfluence = 0.15f;
-        [SerializeField, Min(0.01f)] private float headingDamping = 10f;
+        [SerializeField, Range(0f, 1f)] private float targetUpInfluence = 0.12f;
+        [SerializeField, Min(0.01f)] private float headingDamping = 9f;
 
         private Vector3 positionVelocity;
         private Vector3 smoothedForward;
         private bool initialized;
 
         public Transform Target => target;
+        public float FollowDistance => followDistance;
+        public float FollowHeight => followHeight;
+        public float LookAheadDistance => lookAheadDistance;
+        public float PositionSmoothTime => positionSmoothTime;
+        public float RotationDamping => rotationDamping;
+        public float HeadingDamping => headingDamping;
+        public float TargetUpInfluence => targetUpInfluence;
 
         private void OnEnable()
         {
