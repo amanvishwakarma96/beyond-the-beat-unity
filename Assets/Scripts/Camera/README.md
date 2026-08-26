@@ -1,29 +1,29 @@
 # Phase 0 Smooth Vehicle Camera
 
-Issue #4 adds the lightweight gameplay follow camera used to evaluate the Phase 0 driving prototype.
+The Phase 0 gameplay camera is intentionally lightweight and independent from missions, UI, save data, or vehicle internals.
 
 ## Runtime Component
 
-`CameraFollow.cs` follows a target `Transform` and intentionally has no dependency on missions, UI, save data, mobile controls, or `VehicleController` internals.
+`CameraFollow.cs` follows a target `Transform` in `LateUpdate`, after normal vehicle movement has completed for the frame.
 
-The camera runs in `LateUpdate` so the target has already completed its normal frame/physics-driven movement before the camera applies its follow transform.
+## Phase 0 candidate final tuning
 
-## Starting Tuning
+Issue #10 uses the following candidate baseline for final Android validation:
 
-| Setting | Default | Purpose |
+| Setting | Candidate | Intent |
 | --- | ---: | --- |
-| Follow Distance | 6.5 m | Distance behind vehicle heading |
-| Follow Height | 3.4 m | Camera height above vehicle |
-| Lateral Offset | 0 m | Optional shoulder offset |
-| Look Ahead Distance | 2.0 m | Looks slightly ahead of the vehicle |
-| Look At Height | 1.1 m | Raises focus point above vehicle origin |
-| Position Smooth Time | 0.16 s | Position damping |
-| Rotation Damping | 8 | Rotation responsiveness |
-| Heading Damping | 10 | Smooths abrupt vehicle heading changes |
-| Target Up Influence | 0.15 | Small allowance for vehicle pitch/roll |
-| Max Position Speed | 60 m/s | Prevents pathological camera catch-up spikes |
+| Follow Distance | 6.8 m | Slightly more road context around the vehicle |
+| Follow Height | 3.6 m | Improved forward visibility on mobile screens |
+| Lateral Offset | 0 m | Retains centered driving view |
+| Look Ahead Distance | 2.2 m | Slightly stronger forward framing |
+| Look At Height | 1.15 m | Keeps the focus point above the chassis origin |
+| Position Smooth Time | 0.18 s | Slightly gentler positional damping |
+| Rotation Damping | 7.5 | Slightly softer rotation response |
+| Heading Damping | 9 | Reduces harsh left/right heading changes |
+| Target Up Influence | 0.12 | Reduces camera roll contribution from chassis pitch/roll |
+| Max Position Speed | 60 m/s | Retained catch-up limit |
 
-These are prototype values. Issue #10 remains responsible for final driving/camera feel tuning.
+The structural camera validator checks this baseline so CI does not silently produce a differently tuned Phase 0 build.
 
 ## Editor Setup
 
@@ -33,47 +33,36 @@ After the prototype environment and vehicle have been generated, run:
 Beyond The Beat > Phase 0 > Build Smooth Vehicle Camera
 ```
 
-The command:
-
-1. Opens `Assets/Scenes/Prototype/Phase0_Prototype.unity`.
-2. Finds `PrototypeVehicle`.
-3. Removes the old `PrototypeReferenceCamera` and any previously generated `GameplayCamera`.
-4. Creates one `GameplayCamera` tagged `MainCamera`.
-5. Adds `Camera`, `AudioListener`, and `CameraFollow`.
-6. Assigns `PrototypeVehicle` as the follow target.
-7. Saves the scene.
-
 Then run:
 
 ```text
 Beyond The Beat > Phase 0 > Validate Smooth Vehicle Camera
 ```
 
-The structural validator checks:
+The validator checks:
 
 - Prototype vehicle exists.
 - Gameplay camera exists.
 - `CameraFollow` is attached.
 - Target reference points to the prototype vehicle.
+- Candidate Issue #10 camera tuning matches.
 - Camera has the `MainCamera` tag.
 - Enabled `AudioListener` exists.
 - Temporary reference camera is gone.
 - Exactly one enabled scene camera remains.
 
-## Playtest Checklist
+## Final Phase 0 playtest checklist
 
-Structural validation is not enough. In Play Mode verify:
+- [ ] Camera starts at a useful position without a visible first-frame jump.
+- [ ] Normal acceleration does not create uncomfortable lag.
+- [ ] Braking does not cause excessive overshoot.
+- [ ] Slalom steering remains readable without obvious jitter.
+- [ ] Rapid left/right steering does not make the camera snap harshly.
+- [ ] Reverse remains understandable without an automatic camera flip.
+- [ ] Vehicle pitch/roll does not create uncomfortable camera roll.
+- [ ] Camera does not clip into the prototype vehicle during normal driving.
 
-- Camera starts at a useful position without a visible first-frame jump.
-- Normal acceleration does not create uncomfortable lag.
-- Braking does not cause excessive camera overshoot.
-- Slalom steering remains readable without obvious jitter.
-- Rapid left/right steering does not make the camera snap harshly.
-- Reverse remains understandable because the camera stays behind the vehicle heading instead of flipping around automatically.
-- Basic bumps/vehicle pitch do not introduce excessive camera roll.
-- Camera does not clip into the simple prototype vehicle under normal driving.
-
-Obstacle/camera collision avoidance is intentionally not part of Issue #4 because the Phase 0 test environment is open and lightweight. It can be introduced later only if world geometry proves it necessary.
+Real-device results belong in `Docs/Validation/PHASE_0_VALIDATION.md`. These values remain a candidate baseline until Android validation passes.
 
 ## Performance
 
@@ -87,15 +76,4 @@ The runtime implementation:
 
 ## Scope Boundary
 
-Issue #4 does not add:
-
-- Touch/mobile input
-- Camera orbit controls
-- Cinematic camera modes
-- Mission camera behavior
-- Camera shake
-- Obstacle avoidance
-- UI dependencies
-- Save/persistence behavior
-
-Those should be added only when a later milestone demonstrates a concrete need.
+Phase 0 does not add camera orbit controls, cinematic modes, mission cameras, camera shake, persistence, or obstacle avoidance unless a concrete blocker is found during validation.
