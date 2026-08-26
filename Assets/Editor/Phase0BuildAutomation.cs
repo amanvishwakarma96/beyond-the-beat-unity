@@ -13,6 +13,7 @@ namespace BeyondTheBeat.Editor
     {
         private const string ScenePath = "Assets/Scenes/Prototype/Phase0_Prototype.unity";
         private const string AndroidApplicationId = "com.beyondthebeat.prototype";
+        private const string DiagnosticsRelativePath = "build/phase0-ci-diagnostics.log";
 
         private static readonly string[] BuildSteps =
         {
@@ -48,15 +49,22 @@ namespace BeyondTheBeat.Editor
         /// </summary>
         public static void BuildAndroid()
         {
+            InitializeDiagnostics();
+            AppendDiagnostic(
+                $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, " +
+                $"dataPath={Application.dataPath}");
+
             Application.logMessageReceived += CaptureLog;
 
             try
             {
                 PreparePrototypeInternal();
                 BuildDevelopmentAndroidApk();
+                AppendDiagnostic("BuildAndroid PASS.");
             }
             catch (Exception exception)
             {
+                AppendDiagnostic("BuildAndroid FATAL\n" + exception);
                 Debug.LogException(exception);
                 throw;
             }
@@ -71,14 +79,21 @@ namespace BeyondTheBeat.Editor
         /// </summary>
         public static void PreparePrototype()
         {
+            InitializeDiagnostics();
+            AppendDiagnostic(
+                $"PreparePrototype START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, " +
+                $"dataPath={Application.dataPath}");
+
             Application.logMessageReceived += CaptureLog;
 
             try
             {
                 PreparePrototypeInternal();
+                AppendDiagnostic("PreparePrototype PASS.");
             }
             catch (Exception exception)
             {
+                AppendDiagnostic("PreparePrototype FATAL\n" + exception);
                 Debug.LogException(exception);
                 throw;
             }
@@ -91,6 +106,7 @@ namespace BeyondTheBeat.Editor
         private static void PreparePrototypeInternal()
         {
             Debug.Log("[Beyond The Beat] Starting Phase 0 CI prototype preparation.");
+            AppendDiagnostic("Phase 0 prototype preparation START.");
 
             for (int i = 0; i < BuildSteps.Length; i++)
             {
@@ -124,6 +140,7 @@ namespace BeyondTheBeat.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
+            AppendDiagnostic("Phase 0 prototype preparation PASS.");
             Debug.Log(
                 "[Beyond The Beat] Phase 0 CI preparation PASS. " +
                 $"Scene '{ScenePath}' is generated, validated, and enabled for build.");
@@ -162,9 +179,13 @@ namespace BeyondTheBeat.Editor
                 options = BuildOptions.Development
             };
 
+            AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
             Debug.Log($"[Beyond The Beat] Building Phase 0 development APK: {outputPath}");
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
+            AppendDiagnostic(
+                $"Android BuildPipeline RESULT={summary.result}, errors={summary.totalErrors}, " +
+                $"warnings={summary.totalWarnings}, size={summary.totalSize}, duration={summary.totalTime}.");
 
             if (summary.result != BuildResult.Succeeded)
             {
@@ -182,6 +203,7 @@ namespace BeyondTheBeat.Editor
 
             string stagedPath = StageApkInsideProject(outputPath);
 
+            AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
                 "[Beyond The Beat] Phase 0 Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
@@ -269,11 +291,13 @@ namespace BeyondTheBeat.Editor
 
             capturedErrors = 0;
             capturedErrorMessages.Clear();
+            AppendDiagnostic($"MENU START: {menuPath}");
             Debug.Log($"[Beyond The Beat] CI step: {menuPath}");
 
             bool executed = EditorApplication.ExecuteMenuItem(menuPath);
             if (!executed)
             {
+                AppendDiagnostic($"MENU FAIL (not executable): {menuPath}");
                 throw new InvalidOperationException($"Unity menu command could not be executed: {menuPath}");
             }
 
@@ -283,9 +307,13 @@ namespace BeyondTheBeat.Editor
                     ? string.Empty
                     : "\n" + string.Join("\n---\n", capturedErrorMessages);
 
+                AppendDiagnostic(
+                    $"MENU FAIL ({capturedErrors} error(s)): {menuPath}{details}");
                 throw new InvalidOperationException(
                     $"Unity menu command reported {capturedErrors} error(s): {menuPath}.{details}");
             }
+
+            AppendDiagnostic($"MENU PASS: {menuPath}");
         }
 
         private static void SaveDirtyPersistedScenesForBatchMode()
@@ -298,6 +326,7 @@ namespace BeyondTheBeat.Editor
                     continue;
                 }
 
+                AppendDiagnostic($"Saving dirty persisted scene before menu step: {scene.path}");
                 if (!EditorSceneManager.SaveScene(scene))
                 {
                     throw new InvalidOperationException(
@@ -314,10 +343,59 @@ namespace BeyondTheBeat.Editor
             }
 
             capturedErrors++;
-            capturedErrorMessages.Add(
-                string.IsNullOrWhiteSpace(stackTrace)
-                    ? condition
-                    : $"{condition}\n{stackTrace}");
+            string message = string.IsNullOrWhiteSpace(stackTrace)
+                ? condition
+                : $"{condition}\n{stackTrace}";
+            capturedErrorMessages.Add(message);
+            AppendDiagnostic($"UNITY {type}: {message}");
+        }
+
+        private static void InitializeDiagnostics()
+        {
+            try
+            {
+                string path = GetDiagnosticsPath();
+                string directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                File.WriteAllText(
+                    path,
+                    $"[{DateTime.UtcNow:O}] Beyond The Beat Phase 0 CI diagnostics initialized.{Environment.NewLine}");
+            }
+            catch
+            {
+                // Diagnostics must never replace the actual Unity build failure.
+            }
+        }
+
+        private static void AppendDiagnostic(string message)
+        {
+            try
+            {
+                string path = GetDiagnosticsPath();
+                string directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrWhiteSpace(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                File.AppendAllText(
+                    path,
+                    $"[{DateTime.UtcNow:O}] {message}{Environment.NewLine}");
+            }
+            catch
+            {
+                // Diagnostics must never replace the actual Unity build failure.
+            }
+        }
+
+        private static string GetDiagnosticsPath()
+        {
+            string projectRoot = Path.GetDirectoryName(Application.dataPath);
+            return Path.GetFullPath(Path.Combine(projectRoot ?? ".", DiagnosticsRelativePath));
         }
     }
 }
