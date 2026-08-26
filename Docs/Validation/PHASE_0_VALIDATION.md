@@ -1,6 +1,6 @@
 # Beyond The Beat — Phase 0 Validation Report
 
-> Complete this report before the Phase 0 pull request is marked ready for review.
+> Complete this report before Phase 0 is declared complete and before Phase 1 begins.
 
 ## Build Information
 
@@ -31,6 +31,7 @@
 - Android version:
 - Chipset/SoC:
 - RAM:
+- GPU:
 - Screen resolution/refresh rate:
 
 ## Validation Result
@@ -60,16 +61,25 @@ Choose one:
 | Interaction reset | Leaving/re-entering zone resets correctly | ⬜ | ⬜ | |
 | APK install | Build installs successfully | N/A | ⬜ | |
 | APK launch | Build launches without blocking error/crash | N/A | ⬜ | |
+| Validation overlay | Development-build telemetry is visible and updating | N/A | ⬜ | |
 | APK checksum | SHA-256 matches uploaded manifest | N/A | ⬜ | |
 
 ## Performance Observations
 
-- Approximate FPS range:
+Use the development-build validation overlay plus tester observations. Record values after representative acceleration, braking, slalom/cornering, reversing, and parking activity rather than immediately after launch.
+
+- Typical/approximate FPS range:
+- Overlay FPS now/min/max snapshot:
+- Worst observed frame time (ms):
+- Stutter frames at/above 50 ms:
+- GC collections G0/G1/G2 during test:
+- Approx. allocated/reserved memory (MB):
 - Noticeable stutter:
-- Noticeable GC spikes:
+- Noticeable GC-related pauses:
 - Input latency concerns:
 - Physics/camera jitter:
 - Thermal concerns during test:
+- ADB/logcat evidence captured: Yes / No
 - Other observations:
 
 ## Vehicle Tuning Snapshot
@@ -113,9 +123,10 @@ Confirm that no future-phase systems were introduced:
 - [ ] `Phase0-Artifact-Manifest.txt` matches the APK and commit SHA
 - [ ] APK installs on validation device
 - [ ] APK launches successfully
+- [ ] Development-build validation overlay is visible
 - [ ] Artifact is shared outside normal Git history
 - [ ] GitHub Actions run/artifact location is recorded above
-- [ ] Artifact location is added to the Phase 0 PR
+- [ ] Artifact location is added to the Phase 0 issue/PR evidence
 - [ ] Commit SHA in this report matches the validated build
 
 ## Final Sign-Off
@@ -123,5 +134,5 @@ Confirm that no future-phase systems were introduced:
 - Validator:
 - Date:
 - Final status:
-- Ready for PR review: Yes / No
+- Ready to proceed to Issue #10: Yes / No
 - Notes:
