@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using BeyondTheBeat.CameraSystem;
 using BeyondTheBeat.Vehicle;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -22,10 +23,11 @@ namespace BeyondTheBeat.UI
         [SerializeField, Min(1f)] private float logInterval = 15f;
         [SerializeField, Min(16f)] private float stutterThresholdMs = 50f;
 
-        private readonly StringBuilder builder = new StringBuilder(512);
+        private readonly StringBuilder builder = new StringBuilder(768);
 
         private Text displayText;
         private VehicleController vehicleController;
+        private CameraFollow cameraFollow;
         private int sampleFrameCount;
         private float sampleElapsed;
         private float displayElapsed;
@@ -101,6 +103,7 @@ namespace BeyondTheBeat.UI
             Phase0ValidationOverlay overlay = root.GetComponent<Phase0ValidationOverlay>();
             overlay.displayText = text;
             overlay.vehicleController = UnityEngine.Object.FindFirstObjectByType<VehicleController>();
+            overlay.cameraFollow = UnityEngine.Object.FindFirstObjectByType<CameraFollow>();
 
             root.transform.SetAsLastSibling();
         }
@@ -112,6 +115,7 @@ namespace BeyondTheBeat.UI
             initialGcGen2 = GC.CollectionCount(2);
 
             LogDeviceSummary();
+            LogTuningSummary();
             RefreshDisplay();
         }
 
@@ -233,6 +237,42 @@ namespace BeyondTheBeat.UI
             builder.Append(" s");
 
             return builder.ToString();
+        }
+
+        private void LogTuningSummary()
+        {
+            if (vehicleController == null)
+            {
+                Debug.LogWarning("[Beyond The Beat] Phase 0 tuning snapshot: VehicleController was not found.");
+            }
+            else
+            {
+                Vector3 centerOfMass = vehicleController.CenterOfMassOffset;
+                Debug.Log(
+                    "[Beyond The Beat] Phase 0 candidate vehicle tuning snapshot. " +
+                    $"motorTorque={vehicleController.MotorTorque:0.##}, brakeTorque={vehicleController.BrakeTorque:0.##}, " +
+                    $"maxSteerAngle={vehicleController.MaxSteerAngle:0.##}, steeringResponse={vehicleController.SteeringResponse:0.##}, " +
+                    $"steerReduction={vehicleController.HighSpeedSteerStartKph:0.##}-{vehicleController.HighSpeedSteerFullKph:0.##} kph, " +
+                    $"highSpeedMultiplier={vehicleController.HighSpeedSteerMultiplier:0.##}, " +
+                    $"suspensionSpring={vehicleController.SuspensionSpring:0.##}, suspensionDamper={vehicleController.SuspensionDamper:0.##}, " +
+                    $"friction={vehicleController.ForwardFrictionStiffness:0.##}/{vehicleController.SidewaysFrictionStiffness:0.##}, " +
+                    $"centerOfMass=({centerOfMass.x:0.##},{centerOfMass.y:0.##},{centerOfMass.z:0.##}), " +
+                    $"downforce={vehicleController.DownforceCoefficient:0.##}.");
+            }
+
+            if (cameraFollow == null)
+            {
+                Debug.LogWarning("[Beyond The Beat] Phase 0 tuning snapshot: CameraFollow was not found.");
+            }
+            else
+            {
+                Debug.Log(
+                    "[Beyond The Beat] Phase 0 candidate camera tuning snapshot. " +
+                    $"distance={cameraFollow.FollowDistance:0.##}, height={cameraFollow.FollowHeight:0.##}, " +
+                    $"lookAhead={cameraFollow.LookAheadDistance:0.##}, positionSmoothTime={cameraFollow.PositionSmoothTime:0.###}, " +
+                    $"rotationDamping={cameraFollow.RotationDamping:0.##}, headingDamping={cameraFollow.HeadingDamping:0.##}, " +
+                    $"targetUpInfluence={cameraFollow.TargetUpInfluence:0.##}.");
+            }
         }
 
         private static float BytesToMegabytes(long bytes)

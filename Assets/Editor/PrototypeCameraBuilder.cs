@@ -64,7 +64,7 @@ namespace BeyondTheBeat.Editor
             SceneView.lastActiveSceneView?.FrameSelected();
 
             Debug.Log(
-                "[Beyond The Beat] Smooth gameplay camera created and assigned to PrototypeVehicle. " +
+                "[Beyond The Beat] Smooth gameplay camera created with the Phase 0 candidate final tuning baseline. " +
                 "Enter Play Mode and validate normal driving, steering, braking and reverse visibility.");
         }
 
@@ -94,6 +94,7 @@ namespace BeyondTheBeat.Editor
                 bool cameraPass = cameraObject != null && cameraObject.TryGetComponent<Camera>(out _);
                 bool followPass = cameraObject != null && cameraObject.TryGetComponent(out follow);
                 bool targetPass = followPass && follow != null && follow.Target == vehicle?.transform;
+                bool tuningPass = followPass && follow != null && ValidateCandidateTuning(follow);
                 bool mainCameraPass = cameraObject != null && cameraObject.CompareTag("MainCamera");
                 bool audioListenerPass =
                     cameraObject != null &&
@@ -109,6 +110,7 @@ namespace BeyondTheBeat.Editor
                     cameraPass &&
                     followPass &&
                     targetPass &&
+                    tuningPass &&
                     mainCameraPass &&
                     audioListenerPass &&
                     referenceCameraRemoved &&
@@ -120,6 +122,7 @@ namespace BeyondTheBeat.Editor
                     $"GameplayCamera present: {PassFail(cameraPass)}\n" +
                     $"CameraFollow attached: {PassFail(followPass)}\n" +
                     $"Camera target assigned: {PassFail(targetPass)}\n" +
+                    $"Candidate final camera tuning: {PassFail(tuningPass)}\n" +
                     $"MainCamera tag: {PassFail(mainCameraPass)}\n" +
                     $"AudioListener present: {PassFail(audioListenerPass)}\n" +
                     $"Reference camera removed: {PassFail(referenceCameraRemoved)}\n" +
@@ -141,6 +144,22 @@ namespace BeyondTheBeat.Editor
                     EditorSceneManager.CloseScene(validationScene, true);
                 }
             }
+        }
+
+        private static bool ValidateCandidateTuning(CameraFollow follow)
+        {
+            return Approximately(follow.FollowDistance, 6.8f) &&
+                   Approximately(follow.FollowHeight, 3.6f) &&
+                   Approximately(follow.LookAheadDistance, 2.2f) &&
+                   Approximately(follow.PositionSmoothTime, 0.18f) &&
+                   Approximately(follow.RotationDamping, 7.5f) &&
+                   Approximately(follow.HeadingDamping, 9f) &&
+                   Approximately(follow.TargetUpInfluence, 0.12f);
+        }
+
+        private static bool Approximately(float actual, float expected)
+        {
+            return Mathf.Abs(actual - expected) < 0.001f;
         }
 
         private static void RemoveExistingPrototypeCameras(Scene scene)

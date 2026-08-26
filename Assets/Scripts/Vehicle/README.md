@@ -23,7 +23,7 @@ It intentionally contains no UI, missions, fuel, damage, save, economy, biome, o
 
 ### `VehicleDebugInput`
 
-Temporary editor/development adapter used only to drive the controller before Issue #5 provides the mobile input layer.
+Temporary editor/development adapter used only to drive the controller before the mobile input layer is active.
 
 Controls:
 
@@ -33,30 +33,32 @@ Controls:
 - `D` / Right Arrow: steer right
 - Space: brake
 
-The debug adapter feeds `VehicleController.SetInput(...)`, which is the same normalized boundary later touch controls should use.
+The debug adapter feeds `VehicleController.SetInput(...)`, which is the same normalized boundary used by touch controls.
 
-## Starting tuning values
+## Phase 0 candidate final tuning
 
-| Setting | Start value | Reason |
+Issue #10 promotes the original starting values into a candidate final baseline for Android validation. These values are intentionally conservative and remain subject to real-device confirmation before Phase 0 can pass its exit gate.
+
+| Setting | Candidate value | Change / intent |
 | --- | ---: | --- |
-| Vehicle mass | 1250 kg | Mid-size passenger vehicle baseline |
-| Motor torque | 1800 Nm total axle request | Strong enough for a responsive prototype without targeting arcade acceleration |
-| Brake torque | 3500 Nm | Deliberately stronger than drive torque for controllable stopping tests |
-| Max forward speed | 110 km/h | Enough room to evaluate low/moderate/high-speed steering on the Phase 0 strip |
-| Max reverse speed | 25 km/h | Keeps reverse controllable on touch-oriented gameplay |
-| Max steer angle | 32 degrees | Useful low-speed maneuverability |
-| High-speed steering multiplier | 0.45 | Reduces twitchiness as speed rises |
-| Wheel radius | 0.34 m | Typical passenger-car scale |
-| Wheel mass | 28 kg | Within Unity's documented typical WheelCollider range |
-| Suspension distance | 0.22 m | Short road-car suspension travel |
-| Suspension spring | 35000 | Firm starting point for a 1250 kg prototype |
-| Suspension damper | 4500 | Dampens repeated bouncing while retaining visible suspension response |
-| Center of mass offset | Y = -0.45 m | Lowers rollover tendency during initial handling tests |
-| Forward friction stiffness | 1.35 | Moderate longitudinal grip |
-| Sideways friction stiffness | 1.55 | Slightly stronger lateral grip for predictable steering |
-| Downforce coefficient | 18 | Mild speed-dependent stability aid, not an aerodynamic simulation |
+| Vehicle mass | 1250 kg | Retained passenger-vehicle baseline |
+| Motor torque | 1700 Nm total axle request | Slightly calmer launch response for digital touch input |
+| Brake torque | 3800 Nm | More stopping margin before parking and direction changes |
+| Direction-change brake torque | 2600 Nm | Stronger transition braking before reverse/forward torque swaps |
+| Max forward speed | 110 km/h | Retained validation range |
+| Max reverse speed | 25 km/h | Retained touch-friendly reverse cap |
+| Max steer angle | 30 degrees | Reduces low-speed twitchiness while preserving maneuverability |
+| Steering response | 6 | Slightly softer left/right direction changes |
+| Steering reduction range | 5–50 km/h | Full steer is retained only at very low speed; reduction is explicit and bounded |
+| High-speed steering multiplier | 0.38 | Lower high-speed steering authority for stability |
+| Suspension spring | 35000 | Retained firm road-car spring baseline |
+| Suspension damper | 5000 | Increased damping to reduce repeated oscillation |
+| Center of mass offset | Y = -0.50 m | Slightly lower rollover tendency |
+| Forward friction stiffness | 1.40 | Small increase in longitudinal grip |
+| Sideways friction stiffness | 1.60 | Small increase in lateral stability |
+| Downforce coefficient | 20 | Slightly stronger speed-dependent stability aid |
 
-These values are starting points only. Issue #10 owns the final Phase 0 tuning pass.
+The vehicle validator now checks these candidate values so CI cannot silently build a different Phase 0 tuning setup.
 
 ## Unity Editor setup
 
@@ -89,35 +91,38 @@ Beyond The Beat > Phase 0 > Validate Prototype Vehicle
 Expected checks:
 
 - prototype vehicle exists in the scene
-- Rigidbody is present with the expected starting mass
+- Rigidbody is present with the expected mass
 - `VehicleController` is attached
 - debug input adapter is attached
 - exactly four WheelColliders exist
 - all controller wheel/visual references are assigned
+- candidate final tuning values match the Issue #10 baseline
 - the prototype vehicle prefab exists
 
-## Playtest checklist for Issue #3
+## Final Phase 0 playtest checklist
 
-- [ ] Accelerates from rest without severe wheel hop.
-- [ ] Steers left/right predictably at low speed.
-- [ ] Steering becomes less sensitive as speed increases.
-- [ ] Space brake stops the vehicle reliably.
-- [ ] Pressing reverse while still moving forward brakes before applying reverse torque.
-- [ ] Pressing forward while still reversing brakes before applying forward torque.
+- [ ] Accelerates from rest without severe wheel hop or an uncomfortable launch spike.
+- [ ] Steers left/right predictably at walking/parking speed.
+- [ ] Steering remains controllable at moderate speed.
+- [ ] Steering authority reduces progressively between 5 and 50 km/h.
+- [ ] Brake input stops the vehicle reliably.
+- [ ] Pressing reverse while moving forward brakes before reverse torque is applied.
+- [ ] Pressing forward while reversing brakes before forward torque is applied.
 - [ ] Reverse speed remains controllable.
 - [ ] Vehicle does not roll over during normal slalom testing.
 - [ ] Vehicle remains stable across the simple test obstacles.
 - [ ] Visual wheels track WheelCollider position/rotation.
 - [ ] No repeated managed allocations are introduced by the controller's `FixedUpdate` loop.
 
+Real-device results belong in `Docs/Validation/PHASE_0_VALIDATION.md`. The candidate values are not considered final until that report records a passing Android test.
+
 ## Phase boundary
 
-Do not add the following under Issue #3:
+Do not add the following during Phase 0 tuning:
 
-- gameplay follow camera
-- touch/mobile driving controls
-- parking interaction
 - vehicle damage/fuel
 - missions
 - persistence
 - production biome behavior
+- economy/inventory
+- networking/backend

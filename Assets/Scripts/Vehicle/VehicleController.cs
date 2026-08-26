@@ -18,35 +18,36 @@ namespace BeyondTheBeat.Vehicle
         [SerializeField] private Transform rearRightVisual;
 
         [Header("Power & Braking")]
-        [SerializeField, Min(0f)] private float motorTorque = 1800f;
-        [SerializeField, Min(0f)] private float brakeTorque = 3500f;
+        [SerializeField, Min(0f)] private float motorTorque = 1700f;
+        [SerializeField, Min(0f)] private float brakeTorque = 3800f;
         [SerializeField, Min(1f)] private float maxForwardSpeedKph = 110f;
         [SerializeField, Min(1f)] private float maxReverseSpeedKph = 25f;
-        [SerializeField, Min(0f)] private float directionChangeBrakeTorque = 2200f;
+        [SerializeField, Min(0f)] private float directionChangeBrakeTorque = 2600f;
 
         [Header("Steering")]
-        [SerializeField, Range(1f, 45f)] private float maxSteerAngle = 32f;
-        [SerializeField, Min(0.1f)] private float steeringResponse = 7f;
-        [SerializeField, Min(0f)] private float highSpeedSteerStartKph = 45f;
-        [SerializeField, Range(0.1f, 1f)] private float highSpeedSteerMultiplier = 0.45f;
+        [SerializeField, Range(1f, 45f)] private float maxSteerAngle = 30f;
+        [SerializeField, Min(0.1f)] private float steeringResponse = 6f;
+        [SerializeField, Min(0f)] private float highSpeedSteerStartKph = 5f;
+        [SerializeField, Min(0f)] private float highSpeedSteerFullKph = 50f;
+        [SerializeField, Range(0.1f, 1f)] private float highSpeedSteerMultiplier = 0.38f;
 
         [Header("Chassis")]
         [SerializeField, Min(100f)] private float vehicleMass = 1250f;
-        [SerializeField] private Vector3 centerOfMassOffset = new Vector3(0f, -0.45f, 0f);
+        [SerializeField] private Vector3 centerOfMassOffset = new Vector3(0f, -0.5f, 0f);
         [SerializeField, Min(0f)] private float linearDrag = 0.02f;
-        [SerializeField, Min(0f)] private float angularDrag = 0.5f;
-        [SerializeField, Min(0f)] private float downforceCoefficient = 18f;
+        [SerializeField, Min(0f)] private float angularDrag = 0.6f;
+        [SerializeField, Min(0f)] private float downforceCoefficient = 20f;
 
         [Header("Wheel & Suspension")]
         [SerializeField, Min(0.05f)] private float wheelRadius = 0.34f;
         [SerializeField, Min(1f)] private float wheelMass = 28f;
         [SerializeField, Min(0.01f)] private float suspensionDistance = 0.22f;
         [SerializeField, Min(100f)] private float suspensionSpring = 35000f;
-        [SerializeField, Min(100f)] private float suspensionDamper = 4500f;
+        [SerializeField, Min(100f)] private float suspensionDamper = 5000f;
         [SerializeField, Range(0f, 1f)] private float suspensionTargetPosition = 0.5f;
         [SerializeField, Min(0f)] private float forceAppPointDistance = 0.25f;
-        [SerializeField, Min(0.1f)] private float forwardFrictionStiffness = 1.35f;
-        [SerializeField, Min(0.1f)] private float sidewaysFrictionStiffness = 1.55f;
+        [SerializeField, Min(0.1f)] private float forwardFrictionStiffness = 1.4f;
+        [SerializeField, Min(0.1f)] private float sidewaysFrictionStiffness = 1.6f;
 
         [Header("Simulation")]
         [SerializeField, Min(0.1f)] private float substepSpeedThreshold = 5f;
@@ -60,6 +61,20 @@ namespace BeyondTheBeat.Vehicle
         private float currentSteerAngle;
 
         public float CurrentSpeedKph { get; private set; }
+
+        public float MotorTorque => motorTorque;
+        public float BrakeTorque => brakeTorque;
+        public float MaxSteerAngle => maxSteerAngle;
+        public float SteeringResponse => steeringResponse;
+        public float HighSpeedSteerStartKph => highSpeedSteerStartKph;
+        public float HighSpeedSteerFullKph => highSpeedSteerFullKph;
+        public float HighSpeedSteerMultiplier => highSpeedSteerMultiplier;
+        public float SuspensionSpring => suspensionSpring;
+        public float SuspensionDamper => suspensionDamper;
+        public float ForwardFrictionStiffness => forwardFrictionStiffness;
+        public float SidewaysFrictionStiffness => sidewaysFrictionStiffness;
+        public Vector3 CenterOfMassOffset => centerOfMassOffset;
+        public float DownforceCoefficient => downforceCoefficient;
 
         public bool IsGrounded =>
             (frontLeftCollider != null && frontLeftCollider.isGrounded) ||
@@ -123,11 +138,20 @@ namespace BeyondTheBeat.Vehicle
 
         private void ApplySteering()
         {
-            float speedBlend = highSpeedSteerStartKph <= 0f
-                ? 1f
-                : Mathf.Clamp01(CurrentSpeedKph / highSpeedSteerStartKph);
+            float reductionBlend;
+            if (highSpeedSteerFullKph <= highSpeedSteerStartKph)
+            {
+                reductionBlend = CurrentSpeedKph >= highSpeedSteerStartKph ? 1f : 0f;
+            }
+            else
+            {
+                reductionBlend = Mathf.InverseLerp(
+                    highSpeedSteerStartKph,
+                    highSpeedSteerFullKph,
+                    CurrentSpeedKph);
+            }
 
-            float steerMultiplier = Mathf.Lerp(1f, highSpeedSteerMultiplier, speedBlend);
+            float steerMultiplier = Mathf.Lerp(1f, highSpeedSteerMultiplier, reductionBlend);
             float targetSteerAngle = steeringInput * maxSteerAngle * steerMultiplier;
             currentSteerAngle = Mathf.MoveTowards(
                 currentSteerAngle,
