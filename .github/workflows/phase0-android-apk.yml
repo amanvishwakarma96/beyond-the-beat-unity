@@ -81,6 +81,17 @@ jobs:
           androidExportType: androidPackage
           allowDirtyBuild: true
 
+      - name: Print Phase 0 Unity diagnostics
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Beyond The Beat Phase 0 Unity diagnostics ==="
+          if [[ -f "${GITHUB_WORKSPACE}/build/phase0-ci-diagnostics.log" ]]; then
+            cat "${GITHUB_WORKSPACE}/build/phase0-ci-diagnostics.log"
+          else
+            echo "No Phase 0 diagnostics file was produced. Unity may have failed before the custom build method started."
+          fi
+
       - name: Create artifact manifest and checksum
         id: manifest
         shell: bash
