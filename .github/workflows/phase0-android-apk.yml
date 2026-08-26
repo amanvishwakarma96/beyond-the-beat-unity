@@ -86,11 +86,25 @@ jobs:
         shell: bash
         run: |
           echo "=== Beyond The Beat Phase 0 Unity diagnostics ==="
-          if [[ -f "${GITHUB_WORKSPACE}/build/phase0-ci-diagnostics.log" ]]; then
-            cat "${GITHUB_WORKSPACE}/build/phase0-ci-diagnostics.log"
+          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase0-ci-diagnostics.log"
+          if [[ -f "${DIAGNOSTICS}" ]]; then
+            echo "--- key CI events/errors ---"
+            grep -E '\[Beyond The Beat\]|\[ERROR\]|\[EXCEPTION\]|\[ASSERT\]|\[FAIL\]|Exception|BuildResult' "${DIAGNOSTICS}" || true
+            echo "--- diagnostics tail ---"
+            tail -n 200 "${DIAGNOSTICS}"
           else
             echo "No Phase 0 diagnostics file was produced. Unity may have failed before the custom build method started."
           fi
+
+      - name: Upload Phase 0 Unity diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Phase0-CI-Diagnostics-${{ github.run_number }}
+          path: build/phase0-ci-diagnostics.log
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
 
       - name: Create artifact manifest and checksum
         id: manifest
