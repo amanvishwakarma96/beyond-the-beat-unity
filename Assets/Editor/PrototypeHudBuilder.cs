@@ -212,7 +212,7 @@ namespace BeyondTheBeat.Editor
             textRect.offsetMax = new Vector2(-22f, -10f);
 
             Text text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 22;
