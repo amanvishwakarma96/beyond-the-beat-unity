@@ -15,13 +15,25 @@ namespace BeyondTheBeat.Editor
         private const string AndroidApplicationId = "com.beyondthebeat.mvp";
         private const string DiagnosticsRelativePath = "build/phase1-ci-diagnostics.log";
 
+        private static readonly string[] Phase1BuildSteps =
+        {
+            "Beyond The Beat/Phase 1/Build MVP World Foundation",
+            "Beyond The Beat/Phase 1/Build Reach Location Mission"
+        };
+
+        private static readonly string[] Phase1ValidationSteps =
+        {
+            "Beyond The Beat/Phase 1/Validate MVP World Foundation",
+            "Beyond The Beat/Phase 1/Validate Reach Location Mission"
+        };
+
         private static int capturedErrors;
         private static readonly List<string> capturedErrorMessages = new List<string>();
 
         /// <summary>
         /// Phase 1 GameCI entry point.
-        /// Rebuilds the complete Phase 0 foundation, derives the Phase 1 MVP scene,
-        /// validates the world/zone foundation, then builds a Development Android APK.
+        /// Rebuilds Phase 0, derives the Phase 1 world, adds the current MVP mission slice,
+        /// runs structural/data validators, then builds a Development Android APK.
         /// </summary>
         public static void BuildAndroid()
         {
@@ -34,33 +46,7 @@ namespace BeyondTheBeat.Editor
 
             try
             {
-                AppendDiagnostic("Rebuilding Phase 0 prerequisite foundation.");
-                Phase0BuildAutomation.PreparePrototype();
-
-                ExecuteMenuStep("Beyond The Beat/Phase 1/Build MVP World Foundation");
-                ExecuteMenuStep("Beyond The Beat/Phase 1/Validate MVP World Foundation");
-
-                SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
-                if (sceneAsset == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Phase 1 preparation completed without producing the required scene at '{ScenePath}'.");
-                }
-
-                EditorBuildSettings.scenes = new[]
-                {
-                    new EditorBuildSettingsScene(ScenePath, true)
-                };
-
-                PlayerSettings.productName = "Beyond The Beat";
-                PlayerSettings.companyName = "Beyond The Beat";
-                PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, AndroidApplicationId);
-                EditorUserBuildSettings.buildAppBundle = false;
-
-                ApplyVersionFromCommandLine();
-                AssetDatabase.SaveAssets();
-                AssetDatabase.Refresh();
-
+                PrepareMvpInternal();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic("BuildAndroid PASS.");
             }
@@ -76,13 +62,80 @@ namespace BeyondTheBeat.Editor
             }
         }
 
+        public static void PrepareMvp()
+        {
+            InitializeDiagnostics();
+            Application.logMessageReceived += CaptureLog;
+
+            try
+            {
+                PrepareMvpInternal();
+                AppendDiagnostic("PrepareMvp PASS.");
+            }
+            catch (Exception exception)
+            {
+                AppendDiagnostic("PrepareMvp FATAL\n" + exception);
+                Debug.LogException(exception);
+                throw;
+            }
+            finally
+            {
+                Application.logMessageReceived -= CaptureLog;
+            }
+        }
+
+        private static void PrepareMvpInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 1 MVP CI preparation.");
+            AppendDiagnostic("Phase 1 MVP preparation START.");
+
+            AppendDiagnostic("Rebuilding Phase 0 prerequisite foundation.");
+            Phase0BuildAutomation.PreparePrototype();
+
+            for (int i = 0; i < Phase1BuildSteps.Length; i++)
+            {
+                ExecuteMenuStep(Phase1BuildSteps[i]);
+            }
+
+            for (int i = 0; i < Phase1ValidationSteps.Length; i++)
+            {
+                ExecuteMenuStep(Phase1ValidationSteps[i]);
+            }
+
+            SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
+            if (sceneAsset == null)
+            {
+                throw new InvalidOperationException(
+                    $"Phase 1 preparation completed without producing the required scene at '{ScenePath}'.");
+            }
+
+            EditorBuildSettings.scenes = new[]
+            {
+                new EditorBuildSettingsScene(ScenePath, true)
+            };
+
+            PlayerSettings.productName = "Beyond The Beat";
+            PlayerSettings.companyName = "Beyond The Beat";
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, AndroidApplicationId);
+            EditorUserBuildSettings.buildAppBundle = false;
+
+            ApplyVersionFromCommandLine();
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+
+            AppendDiagnostic("Phase 1 MVP preparation PASS.");
+            Debug.Log(
+                "[Beyond The Beat] Phase 1 MVP CI preparation PASS. " +
+                "World/zone foundation and Reach Location mission are generated and structurally validated.");
+        }
+
         private static void BuildDevelopmentAndroidApk()
         {
             string outputPath = GetCommandLineArgument("customBuildPath");
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase1-world-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase1-reach-location-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -109,7 +162,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 1 world-foundation APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 1 Reach Location development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -136,7 +189,7 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
 
             Debug.Log(
-                "[Beyond The Beat] Phase 1 world-foundation APK build PASS. " +
+                "[Beyond The Beat] Phase 1 Reach Location Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
         }
