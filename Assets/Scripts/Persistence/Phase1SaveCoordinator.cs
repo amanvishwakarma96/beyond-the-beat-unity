@@ -166,13 +166,19 @@ namespace BeyondTheBeat.Persistence
                 return;
             }
 
-            if (newGameMission != null)
-            {
-                missionManager.StartMission(newGameMission);
-            }
-            else
+            if (newGameMission == null)
             {
                 missionManager.ClearMission();
+                return;
+            }
+
+            bool alreadyAtNewGameMission =
+                missionManager.State == MissionState.Active &&
+                missionManager.CurrentMissionId == newGameMission.MissionId;
+
+            if (!alreadyAtNewGameMission)
+            {
+                missionManager.StartMission(newGameMission);
             }
         }
 
