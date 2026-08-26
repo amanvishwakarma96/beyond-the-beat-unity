@@ -14,9 +14,7 @@ namespace BeyondTheBeat.UI
     /// </summary>
     public sealed class Phase0ValidationOverlay : MonoBehaviour
     {
-        [Header("References")]
-        [SerializeField] private Text displayText;
-        [SerializeField] private VehicleController vehicleController;
+        private const string OverlayName = "Phase0ValidationOverlay";
 
         [Header("Sampling")]
         [SerializeField, Min(0.25f)] private float sampleInterval = 1f;
@@ -26,30 +24,89 @@ namespace BeyondTheBeat.UI
 
         private readonly StringBuilder builder = new StringBuilder(512);
 
+        private Text displayText;
+        private VehicleController vehicleController;
         private int sampleFrameCount;
         private float sampleElapsed;
         private float displayElapsed;
         private float logElapsed;
         private float sessionElapsed;
-
         private float currentFps;
         private float minFps = float.PositiveInfinity;
         private float maxFps;
         private float worstFrameMs;
         private int stutterFrameCount;
-
         private int initialGcGen0;
         private int initialGcGen1;
         private int initialGcGen2;
 
-        private void Awake()
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        private static void CreateForDevelopmentBuild()
         {
             if (!Application.isEditor && !Debug.isDebugBuild)
             {
-                gameObject.SetActive(false);
                 return;
             }
 
+            if (GameObject.Find(OverlayName) != null)
+            {
+                return;
+            }
+
+            Canvas canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            if (canvas == null)
+            {
+                Debug.LogWarning("[Beyond The Beat] Phase 0 validation overlay skipped because no Canvas was found.");
+                return;
+            }
+
+            GameObject root = new GameObject(
+                OverlayName,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(Phase0ValidationOverlay));
+            root.transform.SetParent(canvas.transform, false);
+
+            RectTransform rootRect = root.GetComponent<RectTransform>();
+            rootRect.anchorMin = new Vector2(0f, 1f);
+            rootRect.anchorMax = new Vector2(0f, 1f);
+            rootRect.pivot = new Vector2(0f, 1f);
+            rootRect.anchoredPosition = new Vector2(18f, -18f);
+            rootRect.sizeDelta = new Vector2(680f, 214f);
+
+            Image background = root.GetComponent<Image>();
+            background.color = new Color(0.02f, 0.03f, 0.05f, 0.78f);
+            background.raycastTarget = false;
+
+            GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            textObject.transform.SetParent(root.transform, false);
+
+            RectTransform textRect = textObject.GetComponent<RectTransform>();
+            textRect.anchorMin = Vector2.zero;
+            textRect.anchorMax = Vector2.one;
+            textRect.offsetMin = new Vector2(16f, 12f);
+            textRect.offsetMax = new Vector2(-16f, -12f);
+
+            Text text = textObject.GetComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 22;
+            text.resizeTextForBestFit = true;
+            text.resizeTextMinSize = 14;
+            text.resizeTextMaxSize = 22;
+            text.alignment = TextAnchor.UpperLeft;
+            text.color = Color.white;
+            text.raycastTarget = false;
+
+            Phase0ValidationOverlay overlay = root.GetComponent<Phase0ValidationOverlay>();
+            overlay.displayText = text;
+            overlay.vehicleController = UnityEngine.Object.FindFirstObjectByType<VehicleController>();
+
+            root.transform.SetAsLastSibling();
+        }
+
+        private void Awake()
+        {
             initialGcGen0 = GC.CollectionCount(0);
             initialGcGen1 = GC.CollectionCount(1);
             initialGcGen2 = GC.CollectionCount(2);
@@ -108,21 +165,11 @@ namespace BeyondTheBeat.UI
 
         private void OnApplicationPause(bool paused)
         {
-            if (!Application.isEditor && !Debug.isDebugBuild)
-            {
-                return;
-            }
-
             Debug.Log($"[Beyond The Beat] Phase 0 validation app pause state changed. paused={paused}.");
         }
 
         private void OnApplicationFocus(bool hasFocus)
         {
-            if (!Application.isEditor && !Debug.isDebugBuild)
-            {
-                return;
-            }
-
             Debug.Log($"[Beyond The Beat] Phase 0 validation app focus changed. hasFocus={hasFocus}.");
         }
 
