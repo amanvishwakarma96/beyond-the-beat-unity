@@ -18,13 +18,15 @@ namespace BeyondTheBeat.Editor
         private static readonly string[] Phase1BuildSteps =
         {
             "Beyond The Beat/Phase 1/Build MVP World Foundation",
-            "Beyond The Beat/Phase 1/Build Reach Location Mission"
+            "Beyond The Beat/Phase 1/Build Reach Location Mission",
+            "Beyond The Beat/Phase 1/Build Local Save Resume"
         };
 
         private static readonly string[] Phase1ValidationSteps =
         {
             "Beyond The Beat/Phase 1/Validate MVP World Foundation",
-            "Beyond The Beat/Phase 1/Validate Reach Location Mission"
+            "Beyond The Beat/Phase 1/Validate Reach Location Mission",
+            "Beyond The Beat/Phase 1/Validate Local Save Resume"
         };
 
         private static int capturedErrors;
@@ -32,7 +34,7 @@ namespace BeyondTheBeat.Editor
 
         /// <summary>
         /// Phase 1 GameCI entry point.
-        /// Rebuilds Phase 0, derives the Phase 1 world, adds the current MVP mission slice,
+        /// Rebuilds Phase 0, derives the Phase 1 world, adds mission + local persistence slices,
         /// runs structural/data validators, then builds a Development Android APK.
         /// </summary>
         public static void BuildAndroid()
@@ -126,7 +128,7 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("Phase 1 MVP preparation PASS.");
             Debug.Log(
                 "[Beyond The Beat] Phase 1 MVP CI preparation PASS. " +
-                "World/zone foundation and Reach Location mission are generated and structurally validated.");
+                "World/zone, Reach Location mission, and centralized local save/resume are generated and structurally validated.");
         }
 
         private static void BuildDevelopmentAndroidApk()
@@ -135,7 +137,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase1-reach-location-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase1-save-resume-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -162,7 +164,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 1 Reach Location development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 1 Save/Resume development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -189,7 +191,7 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
 
             Debug.Log(
-                "[Beyond The Beat] Phase 1 Reach Location Android APK build PASS. " +
+                "[Beyond The Beat] Phase 1 Save/Resume Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
         }
