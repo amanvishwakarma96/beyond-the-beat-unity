@@ -97,7 +97,7 @@ namespace BeyondTheBeat.Editor
             SceneView.lastActiveSceneView?.FrameSelected();
 
             Debug.Log(
-                "[Beyond The Beat] Prototype vehicle created. " +
+                "[Beyond The Beat] Prototype vehicle created with the Phase 0 candidate final tuning baseline. " +
                 "Play controls: W/S or Up/Down = throttle/reverse, A/D or Left/Right = steer, Space = brake.");
         }
 
@@ -129,6 +129,7 @@ namespace BeyondTheBeat.Editor
                 bool wheelCountPass = vehiclePass && vehicle.GetComponentsInChildren<WheelCollider>(true).Length == 4;
                 bool prefabPass = AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath) != null;
                 bool referencesPass = controllerPass && controller != null && ValidateControllerReferences(controller);
+                bool tuningPass = controllerPass && controller != null && ValidateCandidateTuning(controller);
 
                 bool allPass =
                     vehiclePass &&
@@ -137,7 +138,8 @@ namespace BeyondTheBeat.Editor
                     debugInputPass &&
                     wheelCountPass &&
                     prefabPass &&
-                    referencesPass;
+                    referencesPass &&
+                    tuningPass;
 
                 string message =
                     "[Beyond The Beat] Phase 0 vehicle validation\n" +
@@ -147,6 +149,7 @@ namespace BeyondTheBeat.Editor
                     $"Debug input adapter attached: {PassFail(debugInputPass)}\n" +
                     $"Four WheelColliders: {PassFail(wheelCountPass)}\n" +
                     $"Controller wheel references: {PassFail(referencesPass)}\n" +
+                    $"Candidate final tuning baseline: {PassFail(tuningPass)}\n" +
                     $"Prototype vehicle prefab: {PassFail(prefabPass)}";
 
                 if (allPass)
@@ -224,6 +227,32 @@ namespace BeyondTheBeat.Editor
                 SerializedProperty property = serializedController.FindProperty(name);
                 return property != null && property.objectReferenceValue != null;
             });
+        }
+
+        private static bool ValidateCandidateTuning(VehicleController controller)
+        {
+            Vector3 centerOfMass = controller.CenterOfMassOffset;
+
+            return Approximately(controller.MotorTorque, 1700f) &&
+                   Approximately(controller.BrakeTorque, 3800f) &&
+                   Approximately(controller.MaxSteerAngle, 30f) &&
+                   Approximately(controller.SteeringResponse, 6f) &&
+                   Approximately(controller.HighSpeedSteerStartKph, 5f) &&
+                   Approximately(controller.HighSpeedSteerFullKph, 50f) &&
+                   Approximately(controller.HighSpeedSteerMultiplier, 0.38f) &&
+                   Approximately(controller.SuspensionSpring, 35000f) &&
+                   Approximately(controller.SuspensionDamper, 5000f) &&
+                   Approximately(controller.ForwardFrictionStiffness, 1.4f) &&
+                   Approximately(controller.SidewaysFrictionStiffness, 1.6f) &&
+                   Approximately(centerOfMass.x, 0f) &&
+                   Approximately(centerOfMass.y, -0.5f) &&
+                   Approximately(centerOfMass.z, 0f) &&
+                   Approximately(controller.DownforceCoefficient, 20f);
+        }
+
+        private static bool Approximately(float actual, float expected)
+        {
+            return Mathf.Abs(actual - expected) < 0.001f;
         }
 
         private static void SetObjectReference(SerializedObject target, string propertyName, UnityEngine.Object value)
