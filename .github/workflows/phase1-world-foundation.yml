@@ -1,4 +1,4 @@
-name: Phase 1 World Foundation Android
+name: Phase 1 Reach Location Android
 
 on:
   workflow_dispatch:
@@ -16,12 +16,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase1-world-${{ github.ref }}
+  group: phase1-reach-location-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-world-foundation:
-    name: Build Phase 1 world foundation APK
+  build-reach-location:
+    name: Build Phase 1 Reach Location APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
 
@@ -55,9 +55,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Phase1-World-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          key: Library-Phase1-ReachLocation-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
-      - name: Generate, validate, and build Phase 1 world APK
+      - name: Generate, validate, and build Phase 1 Reach Location APK
         id: unity-build
         uses: game-ci/unity-builder@v5.0.0
         env:
@@ -69,7 +69,7 @@ jobs:
           targetPlatform: Android
           unityVersion: auto
           buildMethod: BeyondTheBeat.Editor.Phase1BuildAutomation.BuildAndroid
-          buildName: BeyondTheBeat-Phase1-World-${{ github.run_number }}
+          buildName: BeyondTheBeat-Phase1-ReachLocation-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
           version: 0.1.${{ github.run_number }}
@@ -81,12 +81,12 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "=== Beyond The Beat Phase 1 world diagnostics ==="
+          echo "=== Beyond The Beat Phase 1 Reach Location diagnostics ==="
           DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase1-ci-diagnostics.log"
           if [[ -f "${DIAGNOSTICS}" ]]; then
             grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
             echo "--- diagnostics tail ---"
-            tail -n 220 "${DIAGNOSTICS}"
+            tail -n 240 "${DIAGNOSTICS}"
           else
             echo "No Phase 1 diagnostics file was produced."
           fi
@@ -95,19 +95,19 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Phase1-World-CI-Diagnostics-${{ github.run_number }}
+          name: Phase1-ReachLocation-CI-Diagnostics-${{ github.run_number }}
           path: build/phase1-ci-diagnostics.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0
 
-      - name: Create world-foundation artifact manifest
+      - name: Create Reach Location artifact manifest
         id: manifest
         shell: bash
         run: |
           set -euo pipefail
 
-          EXPECTED_APK="BeyondTheBeat-Phase1-World-${GITHUB_RUN_NUMBER}.apk"
+          EXPECTED_APK="BeyondTheBeat-Phase1-ReachLocation-${GITHUB_RUN_NUMBER}.apk"
           APK_PATH="$(find "${GITHUB_WORKSPACE}" \
             -type f \
             -name "${EXPECTED_APK}" \
@@ -125,16 +125,16 @@ jobs:
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
-            echo "::error::Unity completed without a discoverable Phase 1 APK."
+            echo "::error::Unity completed without a discoverable Phase 1 Reach Location APK."
             find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
             exit 1
           fi
 
-          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase1World"
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase1ReachLocation"
           rm -rf "${STAGE_DIR}"
           mkdir -p "${STAGE_DIR}"
 
-          APK_FILE="BeyondTheBeat-Phase1-World-${GITHUB_RUN_NUMBER}.apk"
+          APK_FILE="BeyondTheBeat-Phase1-ReachLocation-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
 
@@ -145,9 +145,9 @@ jobs:
 
           printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
 
-          cat > "${STAGE_DIR}/Phase1-World-Artifact-Manifest.txt" <<EOF
-          Beyond The Beat — Phase 1 World Foundation Artifact
-          Artifact name: BeyondTheBeat-Phase1-World-${GITHUB_RUN_NUMBER}
+          cat > "${STAGE_DIR}/Phase1-ReachLocation-Artifact-Manifest.txt" <<EOF
+          Beyond The Beat — Phase 1 Reach Location Artifact
+          Artifact name: BeyondTheBeat-Phase1-ReachLocation-${GITHUB_RUN_NUMBER}
           APK file: ${APK_FILE}
           APK size (bytes): ${APK_SIZE_BYTES}
           SHA-256: ${APK_SHA256}
@@ -158,24 +158,24 @@ jobs:
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          Scope: Phase 1 Issue #27 world/zone foundation only.
-          This artifact is not the Phase 1 MVP exit artifact and does not mark Phase 0 validation as PASS.
+          Scope: Phase 1 Issue #28 MissionManager + Reach Location objective on top of the Issue #27 world foundation.
+          Save/resume, final mission HUD, and Phase 1 exit validation remain later milestones.
           EOF
 
           {
-            echo "artifact_name=BeyondTheBeat-Phase1-World-${GITHUB_RUN_NUMBER}"
-            echo "apk_path=artifact/Phase1World/${APK_FILE}"
+            echo "artifact_name=BeyondTheBeat-Phase1-ReachLocation-${GITHUB_RUN_NUMBER}"
+            echo "apk_path=artifact/Phase1ReachLocation/${APK_FILE}"
             echo "sha256=${APK_SHA256}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Upload Phase 1 world artifact
+      - name: Upload Phase 1 Reach Location artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.manifest.outputs.artifact_name }}
           path: |
-            artifact/Phase1World/BeyondTheBeat-Phase1-World-${{ github.run_number }}.apk
-            artifact/Phase1World/Phase1-World-Artifact-Manifest.txt
-            artifact/Phase1World/SHA256SUMS.txt
+            artifact/Phase1ReachLocation/BeyondTheBeat-Phase1-ReachLocation-${{ github.run_number }}.apk
+            artifact/Phase1ReachLocation/Phase1-ReachLocation-Artifact-Manifest.txt
+            artifact/Phase1ReachLocation/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -184,11 +184,11 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Beyond The Beat — Phase 1 World Foundation"
+            echo "## Beyond The Beat — Phase 1 Reach Location"
             echo
             echo "- Artifact: \`${{ steps.manifest.outputs.artifact_name }}\`"
             echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
-            echo "- Scope: Issue #27 world/zone foundation; Phase 1 MVP is not complete yet."
+            echo "- Scope: Issue #28 MissionManager + Reach Location; SaveManager and Phase 1 exit validation remain pending."
           } >> "${GITHUB_STEP_SUMMARY}"
