@@ -22,7 +22,14 @@ namespace BeyondTheBeat.Editor
         [MenuItem("Beyond The Beat/Phase 0/Build Mobile Driving Controls")]
         private static void BuildMobileDrivingControls()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (Application.isBatchMode)
+            {
+                // Never call SaveOpenScenes in CI. If an untitled scene is open Unity
+                // attempts to show a Save Scene dialog, which batch mode cannot answer.
+                // This builder always reopens the persisted prototype scene below.
+                AssetDatabase.SaveAssets();
+            }
+            else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 return;
             }
@@ -200,7 +207,7 @@ namespace BeyondTheBeat.Editor
             text.resizeTextMaxSize = 36;
             text.color = Color.white;
             text.raycastTarget = false;
-            text.font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
             return buttonObject.GetComponent<TouchHoldButton>();
         }

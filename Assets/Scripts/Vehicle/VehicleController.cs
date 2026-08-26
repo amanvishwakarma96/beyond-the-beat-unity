@@ -81,7 +81,7 @@ namespace BeyondTheBeat.Vehicle
                 return;
             }
 
-            CurrentSpeedKph = body.velocity.magnitude * 3.6f;
+            CurrentSpeedKph = body.linearVelocity.magnitude * 3.6f;
 
             ApplySteering();
             ApplyDriveAndBrakes();
@@ -140,7 +140,7 @@ namespace BeyondTheBeat.Vehicle
 
         private void ApplyDriveAndBrakes()
         {
-            Vector3 localVelocity = transform.InverseTransformDirection(body.velocity);
+            Vector3 localVelocity = transform.InverseTransformDirection(body.linearVelocity);
             bool movingForward = localVelocity.z > 0.5f;
             bool movingBackward = localVelocity.z < -0.5f;
             bool requestingForward = throttleInput > 0.01f;
@@ -189,7 +189,7 @@ namespace BeyondTheBeat.Vehicle
                 return;
             }
 
-            float speedMetersPerSecond = body.velocity.magnitude;
+            float speedMetersPerSecond = body.linearVelocity.magnitude;
             body.AddForce(-transform.up * downforceCoefficient * speedMetersPerSecond, ForceMode.Force);
         }
 
