@@ -200,8 +200,12 @@ namespace BeyondTheBeat.Editor
                     survivalController.ResetResource();
                     survivalController.TryEnterContext(forestZone, vehicle);
                     manager.TryProcessZoneEntry(forestZone, vehicle);
+                    resource.SetValue(0f);
+                    bool depletionProcessed =
+                        manager.State == MissionState.Failed || manager.TryProcessSurvivalDepleted();
                     depletionFailurePass =
-                        manager.TryProcessSurvivalDepleted() &&
+                        resource.IsDepleted &&
+                        depletionProcessed &&
                         manager.State == MissionState.Failed &&
                         !manager.HasActiveMission;
 
