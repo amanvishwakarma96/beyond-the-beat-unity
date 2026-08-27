@@ -124,13 +124,15 @@ namespace BeyondTheBeat.Editor
             PrepareForestSurvivalInternal();
             ExecuteMenuStep("Beyond The Beat/Phase 2/Build Reach + Survive Mission");
             ExecuteMenuStep("Beyond The Beat/Phase 2/Validate Reach + Survive Mission");
+            ExecuteMenuStep("Beyond The Beat/Phase 2/Build Authored Presentation");
+            ExecuteMenuStep("Beyond The Beat/Phase 2/Validate Authored Presentation");
             EnsurePhase2SceneAndSettings();
 
             AppendDiagnostic("Phase 2 Reach + Survive preparation PASS.");
             Debug.Log(
                 "[Beyond The Beat] Phase 2 Reach + Survive CI preparation PASS. " +
-                "Phase 1 Reach Location regression, Forest ZoneContext, survival pressure, timed mission progress, depletion failure, and HUD progress are validated. " +
-                "Final Phase 2 integration/device validation remains Issue #38.");
+                "Phase 1 regression, direct mobile input mapping, authored HUD, forest survival mission, and final presentation pass are validated. " +
+                "Physical Android interaction/visual acceptance is still required before Phase 2 exit sign-off.");
         }
 
         private static void EnsurePhase2SceneAndSettings()
