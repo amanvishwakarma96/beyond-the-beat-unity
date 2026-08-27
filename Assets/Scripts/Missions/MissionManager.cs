@@ -237,7 +237,10 @@ namespace BeyondTheBeat.Missions
         {
             if (!HasActiveMission ||
                 currentMission.ObjectiveType != MissionObjectiveType.ReachAndSurvive ||
-                !targetContextActive)
+                !targetContextActive ||
+                survivalController == null ||
+                survivalController.Resource == null ||
+                !survivalController.Resource.IsDepleted)
             {
                 return false;
             }
