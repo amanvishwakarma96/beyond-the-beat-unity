@@ -57,6 +57,7 @@ namespace BeyondTheBeat.UI
             Brake = 0f;
             previousInteractPressed = false;
             interactionRequested = false;
+            SetControlVisuals(false, false, false, false, false);
             vehicleController?.ClearInput();
         }
 
@@ -74,6 +75,29 @@ namespace BeyondTheBeat.UI
         public void SetVehicleController(VehicleController controller)
         {
             vehicleController = controller;
+        }
+
+        public void EvaluateButtonStatesForValidation(
+            bool leftPressed,
+            bool rightPressed,
+            bool acceleratePressed,
+            bool brakeReversePressed,
+            bool interact,
+            out float steering,
+            out float throttle,
+            out float brake,
+            out bool interactPressed)
+        {
+            ResolveButtonStates(
+                leftPressed,
+                rightPressed,
+                acceleratePressed,
+                brakeReversePressed,
+                interact,
+                out steering,
+                out throttle,
+                out brake,
+                out interactPressed);
         }
 
         public void EvaluateScreenTouchesForValidation(
@@ -135,6 +159,8 @@ namespace BeyondTheBeat.UI
             bool brakeReversePressed = IsControlPressed(brakeReverseButton);
             bool interact = IsControlPressed(interactButton);
 
+            SetControlVisuals(leftPressed, rightPressed, acceleratePressed, brakeReversePressed, interact);
+
             ResolveButtonStates(
                 leftPressed,
                 rightPressed,
@@ -186,6 +212,20 @@ namespace BeyondTheBeat.UI
             }
 
             return false;
+        }
+
+        private void SetControlVisuals(
+            bool leftPressed,
+            bool rightPressed,
+            bool acceleratePressed,
+            bool brakeReversePressed,
+            bool interactPressed)
+        {
+            steerLeftButton?.SetVisualPressed(leftPressed);
+            steerRightButton?.SetVisualPressed(rightPressed);
+            accelerateButton?.SetVisualPressed(acceleratePressed);
+            brakeReverseButton?.SetVisualPressed(brakeReversePressed);
+            interactButton?.SetVisualPressed(interactPressed);
         }
 
         private static bool ContainsAnyTouch(TouchHoldButton button, IReadOnlyList<Vector2> screenTouches)
