@@ -74,8 +74,8 @@ namespace BeyondTheBeat.Editor
             Text title = CreateText(
                 panel.transform,
                 TitleName,
-                new Vector2(18f, -14f),
-                new Vector2(-18f, -56f),
+                new Vector2(18f, -56f),
+                new Vector2(-18f, -14f),
                 30,
                 FontStyle.Bold,
                 TextAnchor.MiddleLeft);
@@ -83,8 +83,8 @@ namespace BeyondTheBeat.Editor
             Text objective = CreateText(
                 panel.transform,
                 ObjectiveName,
-                new Vector2(18f, -58f),
-                new Vector2(-18f, -142f),
+                new Vector2(18f, -142f),
+                new Vector2(-18f, -58f),
                 24,
                 FontStyle.Normal,
                 TextAnchor.UpperLeft);
@@ -92,8 +92,8 @@ namespace BeyondTheBeat.Editor
             Text status = CreateText(
                 panel.transform,
                 StatusName,
-                new Vector2(18f, -146f),
-                new Vector2(-18f, -176f),
+                new Vector2(18f, -176f),
+                new Vector2(-18f, -146f),
                 20,
                 FontStyle.Bold,
                 TextAnchor.MiddleLeft);
@@ -181,8 +181,8 @@ namespace BeyondTheBeat.Editor
 
                 bool completionPass =
                     complete.Title == "MISSION COMPLETE" &&
-                    complete.Status.Contains("FREE ROAM", StringComparison.Ordinal) &&
-                    failed.Status.Contains("FREE ROAM", StringComparison.Ordinal);
+                    complete.Status.IndexOf("FREE ROAM", StringComparison.Ordinal) >= 0 &&
+                    failed.Status.IndexOf("FREE ROAM", StringComparison.Ordinal) >= 0;
 
                 bool nonBlockingPass = structurePass &&
                                        hud.PanelRoot.TryGetComponent(out Image panelImage) &&
