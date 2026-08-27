@@ -25,10 +25,9 @@ namespace BeyondTheBeat.Editor
                 $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
             Application.logMessageReceived += CaptureLog;
-
             try
             {
-                PrepareForestFoundationInternal();
+                PrepareForestSurvivalInternal();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic("BuildAndroid PASS.");
             }
@@ -48,17 +47,25 @@ namespace BeyondTheBeat.Editor
         {
             InitializeDiagnostics();
             Application.logMessageReceived += CaptureLog;
-
             try
             {
                 PrepareForestFoundationInternal();
                 AppendDiagnostic("PrepareForestFoundation PASS.");
             }
-            catch (Exception exception)
+            finally
             {
-                AppendDiagnostic("PrepareForestFoundation FATAL\n" + exception);
-                Debug.LogException(exception);
-                throw;
+                Application.logMessageReceived -= CaptureLog;
+            }
+        }
+
+        public static void PrepareForestSurvival()
+        {
+            InitializeDiagnostics();
+            Application.logMessageReceived += CaptureLog;
+            try
+            {
+                PrepareForestSurvivalInternal();
+                AppendDiagnostic("PrepareForestSurvival PASS.");
             }
             finally
             {
@@ -76,7 +83,30 @@ namespace BeyondTheBeat.Editor
 
             ExecuteMenuStep("Beyond The Beat/Phase 2/Build Forest Biome Foundation");
             ExecuteMenuStep("Beyond The Beat/Phase 2/Validate Forest Biome Foundation");
+            EnsurePhase2SceneAndSettings();
 
+            AppendDiagnostic("Phase 2 forest foundation preparation PASS.");
+        }
+
+        private static void PrepareForestSurvivalInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 2 forest-survival CI preparation.");
+            AppendDiagnostic("Phase 2 forest survival preparation START.");
+
+            PrepareForestFoundationInternal();
+            ExecuteMenuStep("Beyond The Beat/Phase 2/Build Forest Survival Resource");
+            ExecuteMenuStep("Beyond The Beat/Phase 2/Validate Forest Survival Resource");
+            EnsurePhase2SceneAndSettings();
+
+            AppendDiagnostic("Phase 2 forest survival preparation PASS.");
+            Debug.Log(
+                "[Beyond The Beat] Phase 2 forest-survival CI preparation PASS. " +
+                "The integrated Phase 1 loop, Forest ZoneContext, reusable survival resource, and event-driven forest pressure/recovery are validated. " +
+                "Reach + Survive mission orchestration remains Issue #37.");
+        }
+
+        private static void EnsurePhase2SceneAndSettings()
+        {
             SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             if (sceneAsset == null)
             {
@@ -97,12 +127,6 @@ namespace BeyondTheBeat.Editor
             ApplyVersionFromCommandLine();
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-
-            AppendDiagnostic("Phase 2 forest foundation preparation PASS.");
-            Debug.Log(
-                "[Beyond The Beat] Phase 2 forest-foundation CI preparation PASS. " +
-                "The complete Phase 1 MVP prerequisite and the new Forest ZoneContext/world content are structurally validated. " +
-                "Survival mechanics remain a later Phase 2 milestone.");
         }
 
         private static void BuildDevelopmentAndroidApk()
@@ -111,7 +135,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase2-forest-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase2-survival-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -138,7 +162,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 2 Forest Foundation development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 2 Forest Survival development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -165,7 +189,7 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
 
             Debug.Log(
-                "[Beyond The Beat] Phase 2 Forest Foundation Android APK build PASS. " +
+                "[Beyond The Beat] Phase 2 Forest Survival Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
         }
@@ -279,7 +303,6 @@ namespace BeyondTheBeat.Editor
         {
             string expected = "-" + name;
             string[] args = Environment.GetCommandLineArgs();
-
             for (int i = 0; i < args.Length - 1; i++)
             {
                 if (string.Equals(args[i], expected, StringComparison.OrdinalIgnoreCase))
