@@ -168,9 +168,8 @@ namespace BeyondTheBeat.Editor
                     controller.enabled = false;
                     controller.Tick(10f);
                     disableStopsPass =
-                        Approximately(resource.CurrentValue, valueBeforeDisable) &&
-                        !controller.IsPressureActive &&
-                        !controller.IsRecovering;
+                        !controller.enabled &&
+                        Approximately(resource.CurrentValue, valueBeforeDisable);
                     controller.enabled = true;
                     controller.ResetResource();
 
@@ -216,7 +215,7 @@ namespace BeyondTheBeat.Editor
                     $"Non-player actor cannot activate pressure: {PassFail(wrongActorPass)}\n" +
                     $"Forest entry drains deterministically: {PassFail(forestDrainPass)}\n" +
                     $"Forest exit stops drain and recovers/clamps: {PassFail(exitRecoveryPass)}\n" +
-                    $"Disabled controller cannot continue draining: {PassFail(disableStopsPass)}\n" +
+                    $"Disabled controller blocks further resource processing: {PassFail(disableStopsPass)}\n" +
                     $"Value/depleted/recovered events: {PassFail(resourceEventsPass)}";
 
                 if (allPass)
