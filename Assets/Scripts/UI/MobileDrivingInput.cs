@@ -1,10 +1,12 @@
 using System;
+using System.Collections.Generic;
 using BeyondTheBeat.Vehicle;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
 namespace BeyondTheBeat.UI
 {
+    [DisallowMultipleComponent]
     public sealed class MobileDrivingInput : MonoBehaviour
     {
         [Header("Vehicle")]
@@ -16,6 +18,7 @@ namespace BeyondTheBeat.UI
         [SerializeField] private TouchHoldButton accelerateButton;
         [SerializeField] private TouchHoldButton brakeReverseButton;
         [SerializeField] private TouchHoldButton interactButton;
+        [SerializeField] private bool enableDirectTouchFallback = true;
 
         [Header("Editor Fallback")]
         [SerializeField] private bool enableKeyboardFallback = true;
@@ -26,6 +29,7 @@ namespace BeyondTheBeat.UI
         public float Steering { get; private set; }
         public float Throttle { get; private set; }
         public float Brake { get; private set; }
+        public bool DirectTouchFallbackEnabled => enableDirectTouchFallback;
 
         public event Action InteractionPressed;
 
@@ -43,24 +47,7 @@ namespace BeyondTheBeat.UI
                 ApplyKeyboardFallback(ref steering, ref throttle, ref brake, ref interactPressed);
             }
 
-            if (brake > 0.01f)
-            {
-                throttle = 0f;
-            }
-
-            Steering = Mathf.Clamp(steering, -1f, 1f);
-            Throttle = Mathf.Clamp(throttle, -1f, 1f);
-            Brake = Mathf.Clamp01(brake);
-
-            vehicleController.SetInput(Steering, Throttle, Brake);
-
-            if (interactPressed && !previousInteractPressed)
-            {
-                interactionRequested = true;
-                InteractionPressed?.Invoke();
-            }
-
-            previousInteractPressed = interactPressed;
+            ApplyResolvedInput(steering, throttle, brake, interactPressed);
         }
 
         private void OnDisable()
@@ -89,22 +76,151 @@ namespace BeyondTheBeat.UI
             vehicleController = controller;
         }
 
+        public void EvaluateScreenTouchesForValidation(
+            IReadOnlyList<Vector2> screenTouches,
+            out float steering,
+            out float throttle,
+            out float brake,
+            out bool interactPressed)
+        {
+            bool leftPressed = ContainsAnyTouch(steerLeftButton, screenTouches);
+            bool rightPressed = ContainsAnyTouch(steerRightButton, screenTouches);
+            bool acceleratePressed = ContainsAnyTouch(accelerateButton, screenTouches);
+            bool brakeReversePressed = ContainsAnyTouch(brakeReverseButton, screenTouches);
+            bool interact = ContainsAnyTouch(interactButton, screenTouches);
+
+            ResolveButtonStates(
+                leftPressed,
+                rightPressed,
+                acceleratePressed,
+                brakeReversePressed,
+                interact,
+                out steering,
+                out throttle,
+                out brake,
+                out interactPressed);
+        }
+
+        private void ApplyResolvedInput(float steering, float throttle, float brake, bool interactPressed)
+        {
+            if (brake > 0.01f)
+            {
+                throttle = 0f;
+            }
+
+            Steering = Mathf.Clamp(steering, -1f, 1f);
+            Throttle = Mathf.Clamp(throttle, -1f, 1f);
+            Brake = Mathf.Clamp01(brake);
+
+            vehicleController.SetInput(Steering, Throttle, Brake);
+
+            if (interactPressed && !previousInteractPressed)
+            {
+                interactionRequested = true;
+                InteractionPressed?.Invoke();
+            }
+
+            previousInteractPressed = interactPressed;
+        }
+
         private void ReadTouchInput(
             out float steering,
             out float throttle,
             out float brake,
             out bool interactPressed)
         {
-            bool leftPressed = steerLeftButton != null && steerLeftButton.IsPressed;
-            bool rightPressed = steerRightButton != null && steerRightButton.IsPressed;
-            bool acceleratePressed = accelerateButton != null && accelerateButton.IsPressed;
-            bool brakeReversePressed = brakeReverseButton != null && brakeReverseButton.IsPressed;
+            bool leftPressed = IsControlPressed(steerLeftButton);
+            bool rightPressed = IsControlPressed(steerRightButton);
+            bool acceleratePressed = IsControlPressed(accelerateButton);
+            bool brakeReversePressed = IsControlPressed(brakeReverseButton);
+            bool interact = IsControlPressed(interactButton);
 
+            ResolveButtonStates(
+                leftPressed,
+                rightPressed,
+                acceleratePressed,
+                brakeReversePressed,
+                interact,
+                out steering,
+                out throttle,
+                out brake,
+                out interactPressed);
+        }
+
+        private bool IsControlPressed(TouchHoldButton button)
+        {
+            if (button == null)
+            {
+                return false;
+            }
+
+            if (button.IsPressed)
+            {
+                return true;
+            }
+
+            if (!enableDirectTouchFallback)
+            {
+                return false;
+            }
+
+            Touchscreen touchscreen = Touchscreen.current;
+            if (touchscreen == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < touchscreen.touches.Count; i++)
+            {
+                var touch = touchscreen.touches[i];
+                if (!touch.press.isPressed)
+                {
+                    continue;
+                }
+
+                Vector2 position = touch.position.ReadValue();
+                if (button.ContainsScreenPoint(position))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool ContainsAnyTouch(TouchHoldButton button, IReadOnlyList<Vector2> screenTouches)
+        {
+            if (button == null || screenTouches == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < screenTouches.Count; i++)
+            {
+                if (button.ContainsScreenPoint(screenTouches[i]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void ResolveButtonStates(
+            bool leftPressed,
+            bool rightPressed,
+            bool acceleratePressed,
+            bool brakeReversePressed,
+            bool interact,
+            out float steering,
+            out float throttle,
+            out float brake,
+            out bool interactPressed)
+        {
             steering = (rightPressed ? 1f : 0f) - (leftPressed ? 1f : 0f);
 
             if (acceleratePressed && brakeReversePressed)
             {
-                // Conflicting pedals resolve to a full brake instead of applying motor torque.
                 throttle = 0f;
                 brake = 1f;
             }
@@ -114,7 +230,7 @@ namespace BeyondTheBeat.UI
                 brake = 0f;
             }
 
-            interactPressed = interactButton != null && interactButton.IsPressed;
+            interactPressed = interact;
         }
 
         private static void ApplyKeyboardFallback(
