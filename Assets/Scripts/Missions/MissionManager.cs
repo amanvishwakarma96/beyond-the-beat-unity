@@ -130,26 +130,27 @@ namespace BeyondTheBeat.Missions
             SetState(MissionState.Inactive);
         }
 
-        private void HandleZoneEntered(ZoneContext zone, GameObject actor)
+        public bool TryProcessZoneEntry(ZoneContext zone, GameObject actor)
         {
-            if (!HasActiveMission)
+            if (!HasActiveMission ||
+                !MissionObjectiveEvaluator.IsSatisfied(currentMission, zone, actor, playerActor))
             {
-                return;
+                return false;
             }
 
-            if (!MissionObjectiveEvaluator.IsSatisfied(currentMission, zone, actor, playerActor))
-            {
-                return;
-            }
-
-            CompleteActiveMission();
+            return CompleteActiveMission();
         }
 
-        private void CompleteActiveMission()
+        private void HandleZoneEntered(ZoneContext zone, GameObject actor)
+        {
+            TryProcessZoneEntry(zone, actor);
+        }
+
+        private bool CompleteActiveMission()
         {
             if (!HasActiveMission)
             {
-                return;
+                return false;
             }
 
             MissionDefinition completedMission = currentMission;
@@ -159,6 +160,7 @@ namespace BeyondTheBeat.Missions
             Debug.Log(
                 $"[Beyond The Beat] Mission COMPLETED: id='{completedMission.MissionId}'. " +
                 "Free roam remains available.");
+            return true;
         }
 
         private MissionDefinition ResolveMissionById(string missionId)

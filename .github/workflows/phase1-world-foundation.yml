@@ -1,4 +1,4 @@
-name: Phase 1 Save Resume Android
+name: Phase 1 MVP Exit Android
 
 on:
   workflow_dispatch:
@@ -16,12 +16,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase1-save-resume-${{ github.ref }}
+  group: phase1-mvp-exit-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-save-resume:
-    name: Build Phase 1 Save Resume APK
+  build-mvp-exit:
+    name: Build Phase 1 MVP exit candidate APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
 
@@ -55,9 +55,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Phase1-SaveResume-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          key: Library-Phase1-MvpExit-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
-      - name: Generate, validate, and build Phase 1 Save Resume APK
+      - name: Generate, validate, and build Phase 1 MVP exit candidate
         id: unity-build
         uses: game-ci/unity-builder@v5.0.0
         env:
@@ -69,7 +69,7 @@ jobs:
           targetPlatform: Android
           unityVersion: auto
           buildMethod: BeyondTheBeat.Editor.Phase1BuildAutomation.BuildAndroid
-          buildName: BeyondTheBeat-Phase1-SaveResume-${{ github.run_number }}
+          buildName: BeyondTheBeat-Phase1-MVP-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
           version: 0.1.${{ github.run_number }}
@@ -77,37 +77,37 @@ jobs:
           androidExportType: androidPackage
           allowDirtyBuild: true
 
-      - name: Print Phase 1 diagnostics
+      - name: Print Phase 1 exit diagnostics
         if: always()
         shell: bash
         run: |
-          echo "=== Beyond The Beat Phase 1 Save Resume diagnostics ==="
+          echo "=== Beyond The Beat Phase 1 MVP exit diagnostics ==="
           DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase1-ci-diagnostics.log"
           if [[ -f "${DIAGNOSTICS}" ]]; then
-            grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
+            grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS|REQUIRED' "${DIAGNOSTICS}" || true
             echo "--- diagnostics tail ---"
-            tail -n 260 "${DIAGNOSTICS}"
+            tail -n 320 "${DIAGNOSTICS}"
           else
             echo "No Phase 1 diagnostics file was produced."
           fi
 
-      - name: Upload Phase 1 diagnostics
+      - name: Upload Phase 1 exit diagnostics
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Phase1-SaveResume-CI-Diagnostics-${{ github.run_number }}
+          name: Phase1-MVP-Exit-CI-Diagnostics-${{ github.run_number }}
           path: build/phase1-ci-diagnostics.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0
 
-      - name: Create Save Resume artifact manifest
+      - name: Create Phase 1 MVP artifact manifest
         id: manifest
         shell: bash
         run: |
           set -euo pipefail
 
-          EXPECTED_APK="BeyondTheBeat-Phase1-SaveResume-${GITHUB_RUN_NUMBER}.apk"
+          EXPECTED_APK="BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}.apk"
           APK_PATH="$(find "${GITHUB_WORKSPACE}" \
             -type f \
             -name "${EXPECTED_APK}" \
@@ -125,16 +125,16 @@ jobs:
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
-            echo "::error::Unity completed without a discoverable Phase 1 Save Resume APK."
+            echo "::error::Unity completed without a discoverable Phase 1 MVP APK."
             find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
             exit 1
           fi
 
-          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase1SaveResume"
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase1MVP"
           rm -rf "${STAGE_DIR}"
           mkdir -p "${STAGE_DIR}"
 
-          APK_FILE="BeyondTheBeat-Phase1-SaveResume-${GITHUB_RUN_NUMBER}.apk"
+          APK_FILE="BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
 
@@ -145,9 +145,9 @@ jobs:
 
           printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
 
-          cat > "${STAGE_DIR}/Phase1-SaveResume-Artifact-Manifest.txt" <<EOF
-          Beyond The Beat — Phase 1 Save Resume Artifact
-          Artifact name: BeyondTheBeat-Phase1-SaveResume-${GITHUB_RUN_NUMBER}
+          cat > "${STAGE_DIR}/Phase1-MVP-Artifact-Manifest.txt" <<EOF
+          Beyond The Beat — Phase 1 MVP Exit Candidate
+          Artifact name: BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}
           APK file: ${APK_FILE}
           APK size (bytes): ${APK_SIZE_BYTES}
           SHA-256: ${APK_SHA256}
@@ -158,24 +158,28 @@ jobs:
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          Scope: Phase 1 Issue #29 centralized local SaveManager + vehicle/mission resume on top of Issues #27/#28.
-          Final mission HUD and Phase 1 exit validation remain Issue #30.
+          Scope: Phase 1 Issues #27-#30 integrated MVP candidate: world/zone, Reach Location mission,
+          local save/resume, mission HUD, free-roam semantics, and inherited mobile-driving/parking regression checks.
+
+          IMPORTANT: CI success proves deterministic generation/validation/build only. Final Phase 1 PASS/PASS WITH ACCEPTED
+          KNOWN ISSUES requires physical Android install, launch, touch-control, mission, save/resume, parking, and performance evidence
+          recorded in Docs/Validation/PHASE_1_VALIDATION.md.
           EOF
 
           {
-            echo "artifact_name=BeyondTheBeat-Phase1-SaveResume-${GITHUB_RUN_NUMBER}"
-            echo "apk_path=artifact/Phase1SaveResume/${APK_FILE}"
+            echo "artifact_name=BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}"
+            echo "apk_path=artifact/Phase1MVP/${APK_FILE}"
             echo "sha256=${APK_SHA256}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Upload Phase 1 Save Resume artifact
+      - name: Upload Phase 1 MVP artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.manifest.outputs.artifact_name }}
           path: |
-            artifact/Phase1SaveResume/BeyondTheBeat-Phase1-SaveResume-${{ github.run_number }}.apk
-            artifact/Phase1SaveResume/Phase1-SaveResume-Artifact-Manifest.txt
-            artifact/Phase1SaveResume/SHA256SUMS.txt
+            artifact/Phase1MVP/BeyondTheBeat-Phase1-MVP-${{ github.run_number }}.apk
+            artifact/Phase1MVP/Phase1-MVP-Artifact-Manifest.txt
+            artifact/Phase1MVP/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -184,11 +188,12 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Beyond The Beat — Phase 1 Save Resume"
+            echo "## Beyond The Beat — Phase 1 MVP Exit Candidate"
             echo
             echo "- Artifact: \`${{ steps.manifest.outputs.artifact_name }}\`"
             echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
-            echo "- Scope: Issue #29 centralized local save/resume; final Phase 1 integration/validation remains Issue #30."
+            echo "- Repository-side Issue #30 integration checks: completed in Unity build automation."
+            echo "- Final Phase 1 sign-off: pending physical Android validation report."
           } >> "${GITHUB_STEP_SUMMARY}"

@@ -1,6 +1,6 @@
 # Phase 0 Mobile Driving Controls
 
-This folder contains the mobile-first driving input layer for Beyond The Beat Phase 0.
+This folder contains the mobile-first driving input layer for Beyond The Beat Phase 0 and the lightweight mission-status HUD used by the Phase 1 MVP.
 
 ## Components
 
@@ -30,7 +30,20 @@ and:
 ConsumeInteractionRequest()
 ```
 
-The actual interaction system is intentionally deferred to Issue #6.
+### `MissionHud`
+
+Phase 1 adds a lightweight, event-driven mission panel to the existing `MobileDrivingCanvas`.
+
+The HUD listens only to `MissionManager.MissionStateChanged`. It does not poll mission or world state in `Update`, and its panel/text graphics have raycast disabled so the overlay cannot intercept the existing touch controls.
+
+View states:
+
+- **Inactive:** `FREE ROAM` / `NO ACTIVE MISSION`
+- **Active:** mission display name + mission description / `MISSION ACTIVE`
+- **Completed:** `MISSION COMPLETE` / `COMPLETE • FREE ROAM AVAILABLE`
+- **Failed:** `MISSION FAILED` / `FAILED • FREE ROAM AVAILABLE`
+
+Mission completion deliberately leaves driving, parking, and world traversal available.
 
 ## Control Layout
 
@@ -46,6 +59,8 @@ Right side:
 - Brake / Reverse
 - Accelerate
 - Action
+
+Phase 1 mission status occupies the upper-left area and does not overlap the bottom driving controls.
 
 The controls use large touch areas intended for phone testing rather than final production art.
 
@@ -74,26 +89,22 @@ The earlier `VehicleDebugInput` component is disabled in the scene when the mobi
 
 ## Build the Controls
 
-Open the prototype project and run:
+Phase 0 controls:
 
 ```text
 Beyond The Beat > Phase 0 > Build Mobile Driving Controls
-```
-
-This creates:
-
-- `MobileDrivingCanvas`
-- Canvas Scaler for landscape mobile layout
-- Graphic Raycaster
-- five touch controls
-- `MobileDrivingInput`
-- Input System UI EventSystem/module if needed
-
-Then run:
-
-```text
 Beyond The Beat > Phase 0 > Validate Mobile Driving Controls
 ```
+
+Phase 1 mission HUD:
+
+```text
+Beyond The Beat > Phase 1 > Build Mission HUD
+Beyond The Beat > Phase 1 > Validate Mission HUD
+Beyond The Beat > Phase 1 > Validate MVP Exit Gate
+```
+
+`Phase1BuildAutomation` runs these automatically in CI after rebuilding the world, mission, and persistence slices.
 
 ## Required Validation
 
@@ -105,12 +116,16 @@ Beyond The Beat > Phase 0 > Validate Mobile Driving Controls
 - All five touch-control references are assigned.
 - Input System UI module is active.
 - Previous standalone debug adapter is disabled.
+- Phase 1 Mission HUD is bound to the generated `MissionManager`.
+- Mission HUD graphics do not capture raycasts.
 
-### Editor
+### Editor / CI
 
 - Keyboard fallback still drives the vehicle.
 - `E` produces one interaction request per press.
 - Holding conflicting acceleration/reverse resolves to brake.
+- Mission HUD exposes correct inactive, active, completed, and failed/free-roam states.
+- Integrated Phase 1 exit validator confirms mission completion does not disable mobile driving or parking structure.
 
 ### Android Device
 
@@ -120,19 +135,21 @@ Beyond The Beat > Phase 0 > Validate Mobile Driving Controls
 - Rapidly switching steering directions does not leave a stuck button state.
 - Lifting a finger stops that control cleanly.
 - Action button can be tapped while another driving control is held.
+- Mission HUD does not intercept touch input.
+- Mission completion changes the HUD and free roaming remains possible.
 - No obvious input delay or missed multi-touch combinations occur.
+
+Final device evidence is recorded in `Docs/Validation/PHASE_1_VALIDATION.md`.
 
 ## Scope Boundary
 
-This milestone does not implement:
+The Phase 1 HUD is intentionally minimal. It does not implement:
 
-- interaction execution
-- parking logic
-- final HUD styling
+- production visual art
 - speedometer/minimap
-- missions
-- save/persistence
+- mission selection menus
+- cloud sync/login
 - haptics
 - customizable control layout
 
-Those belong to later issues/phases.
+Those remain later-phase work.
