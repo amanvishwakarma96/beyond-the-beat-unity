@@ -1,11 +1,17 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 
 namespace BeyondTheBeat.UI
 {
     [DisallowMultipleComponent]
     public sealed class TouchHoldButton : MonoBehaviour, IPointerDownHandler, IPointerUpHandler, IPointerExitHandler
     {
+        [Header("Visual feedback")]
+        [SerializeField] private Graphic visualTarget;
+        [SerializeField] private Color normalColor = Color.white;
+        [SerializeField] private Color pressedColor = Color.white;
+
         private int activePointerId = int.MinValue;
         private RectTransform cachedRectTransform;
 
@@ -13,6 +19,11 @@ namespace BeyondTheBeat.UI
         public RectTransform RectTransform => cachedRectTransform != null
             ? cachedRectTransform
             : (cachedRectTransform = transform as RectTransform);
+
+        private void Awake()
+        {
+            SetVisualPressed(false);
+        }
 
         public void OnPointerDown(PointerEventData eventData)
         {
@@ -23,6 +34,7 @@ namespace BeyondTheBeat.UI
 
             activePointerId = eventData.pointerId;
             IsPressed = true;
+            SetVisualPressed(true);
         }
 
         public void OnPointerUp(PointerEventData eventData)
@@ -53,6 +65,22 @@ namespace BeyondTheBeat.UI
             Release();
         }
 
+        public void ConfigureVisual(Graphic target, Color normal, Color pressed)
+        {
+            visualTarget = target;
+            normalColor = normal;
+            pressedColor = pressed;
+            SetVisualPressed(false);
+        }
+
+        public void SetVisualPressed(bool pressed)
+        {
+            if (visualTarget != null)
+            {
+                visualTarget.color = pressed ? pressedColor : normalColor;
+            }
+        }
+
         public bool ContainsScreenPoint(Vector2 screenPosition, Camera eventCamera = null)
         {
             RectTransform rectTransform = RectTransform;
@@ -64,6 +92,7 @@ namespace BeyondTheBeat.UI
         {
             IsPressed = false;
             activePointerId = int.MinValue;
+            SetVisualPressed(false);
         }
     }
 }
