@@ -18,15 +18,13 @@ namespace BeyondTheBeat.Editor
         private const string CanvasName = "MobileDrivingCanvas";
         private const string EventSystemName = "EventSystem";
         private const string VehicleName = "PrototypeVehicle";
+        private const string ControlsRootName = "DrivingControls";
 
         [MenuItem("Beyond The Beat/Phase 0/Build Mobile Driving Controls")]
         private static void BuildMobileDrivingControls()
         {
             if (Application.isBatchMode)
             {
-                // Never call SaveOpenScenes in CI. If an untitled scene is open Unity
-                // attempts to show a Save Scene dialog, which batch mode cannot answer.
-                // This builder always reopens the persisted prototype scene below.
                 AssetDatabase.SaveAssets();
             }
             else if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -66,11 +64,73 @@ namespace BeyondTheBeat.Editor
             canvasObject.AddComponent<GraphicRaycaster>();
             MobileDrivingInput input = canvasObject.AddComponent<MobileDrivingInput>();
 
-            TouchHoldButton left = CreateControlButton(canvasObject.transform, "SteerLeft", "◀", new Vector2(160f, 155f), new Vector2(175f, 175f), Anchor.BottomLeft);
-            TouchHoldButton right = CreateControlButton(canvasObject.transform, "SteerRight", "▶", new Vector2(360f, 155f), new Vector2(175f, 175f), Anchor.BottomLeft);
-            TouchHoldButton reverse = CreateControlButton(canvasObject.transform, "BrakeReverse", "BRAKE\nREV", new Vector2(-365f, 155f), new Vector2(190f, 175f), Anchor.BottomRight);
-            TouchHoldButton accelerate = CreateControlButton(canvasObject.transform, "Accelerate", "GAS", new Vector2(-155f, 155f), new Vector2(190f, 175f), Anchor.BottomRight);
-            TouchHoldButton interact = CreateControlButton(canvasObject.transform, "Interact", "ACTION", new Vector2(-155f, 380f), new Vector2(190f, 135f), Anchor.BottomRight);
+            GameObject controlsRoot = new GameObject(ControlsRootName, typeof(RectTransform));
+            controlsRoot.transform.SetParent(canvasObject.transform, false);
+            StretchFullScreen(controlsRoot.GetComponent<RectTransform>());
+
+            CreateControlDock(
+                controlsRoot.transform,
+                "SteeringDock",
+                new Vector2(0f, 0f),
+                new Vector2(270f, 150f),
+                new Vector2(500f, 250f));
+
+            CreateControlDock(
+                controlsRoot.transform,
+                "PedalDock",
+                new Vector2(1f, 0f),
+                new Vector2(-280f, 150f),
+                new Vector2(520f, 250f));
+
+            TouchHoldButton left = CreateCircleControl(
+                controlsRoot.transform,
+                "SteerLeft",
+                "‹",
+                new Vector2(155f, 145f),
+                178f,
+                Anchor.BottomLeft,
+                new Color(0.10f, 0.18f, 0.26f, 0.94f),
+                new Color(0.14f, 0.46f, 0.56f, 1f));
+
+            TouchHoldButton right = CreateCircleControl(
+                controlsRoot.transform,
+                "SteerRight",
+                "›",
+                new Vector2(365f, 145f),
+                178f,
+                Anchor.BottomLeft,
+                new Color(0.10f, 0.18f, 0.26f, 0.94f),
+                new Color(0.14f, 0.46f, 0.56f, 1f));
+
+            TouchHoldButton reverse = CreateCircleControl(
+                controlsRoot.transform,
+                "BrakeReverse",
+                "BRAKE\nREV",
+                new Vector2(-365f, 145f),
+                182f,
+                Anchor.BottomRight,
+                new Color(0.28f, 0.08f, 0.08f, 0.96f),
+                new Color(0.70f, 0.13f, 0.12f, 1f));
+
+            TouchHoldButton accelerate = CreateCircleControl(
+                controlsRoot.transform,
+                "Accelerate",
+                "GO",
+                new Vector2(-155f, 145f),
+                198f,
+                Anchor.BottomRight,
+                new Color(0.05f, 0.25f, 0.29f, 0.96f),
+                new Color(0.08f, 0.62f, 0.68f, 1f));
+
+            TouchHoldButton interact = CreatePillControl(
+                controlsRoot.transform,
+                "Interact",
+                "ACTION",
+                new Vector2(-190f, 350f),
+                new Vector2(220f, 92f),
+                Anchor.BottomRight,
+                new Color(0.30f, 0.19f, 0.04f, 0.94f),
+                new Color(0.88f, 0.48f, 0.08f, 1f));
 
             SerializedObject serializedInput = new SerializedObject(input);
             SetObjectReference(serializedInput, "vehicleController", controller);
@@ -79,6 +139,13 @@ namespace BeyondTheBeat.Editor
             SetObjectReference(serializedInput, "accelerateButton", accelerate);
             SetObjectReference(serializedInput, "brakeReverseButton", reverse);
             SetObjectReference(serializedInput, "interactButton", interact);
+
+            SerializedProperty directFallback = serializedInput.FindProperty("enableDirectTouchFallback");
+            if (directFallback == null)
+            {
+                throw new InvalidOperationException("MobileDrivingInput direct-touch fallback field was not found.");
+            }
+            directFallback.boolValue = true;
             serializedInput.ApplyModifiedPropertiesWithoutUndo();
 
             VehicleDebugInput debugInput = vehicle.GetComponent<VehicleDebugInput>();
@@ -92,8 +159,10 @@ namespace BeyondTheBeat.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            Selection.activeGameObject = canvasObject;
-            Debug.Log("[Beyond The Beat] Mobile driving controls created. Use touch in a device build or W/A/S/D + Space + E in the Editor.");
+            Selection.activeGameObject = controlsRoot;
+            Debug.Log(
+                "[Beyond The Beat] Mobile driving controls created with direct Input System multi-touch fallback, " +
+                "authored circular/pill presentation, and visible press feedback.");
         }
 
         [MenuItem("Beyond The Beat/Phase 0/Validate Mobile Driving Controls")]
@@ -130,13 +199,69 @@ namespace BeyondTheBeat.Editor
 
                 bool inputPass = canvasPass && canvasObject.TryGetComponent(out input);
                 bool controlsPass = inputPass && input != null && ValidateInputReferences(input);
-                bool fiveButtonsPass = canvasPass && canvasObject.GetComponentsInChildren<TouchHoldButton>(true).Length == 5;
+                TouchHoldButton[] buttons = canvasPass
+                    ? canvasObject.GetComponentsInChildren<TouchHoldButton>(true)
+                    : Array.Empty<TouchHoldButton>();
+                bool fiveButtonsPass = buttons.Length == 5;
+                bool authoredVisualsPass = fiveButtonsPass && buttons.All(button =>
+                {
+                    Image image = button.GetComponent<Image>();
+                    Transform label = button.transform.Find("Label");
+                    return image != null && image.sprite != null && image.raycastTarget && label != null;
+                });
                 bool eventSystemPass = eventSystem != null && eventSystem.GetComponent<InputSystemUIInputModule>() != null;
+                bool directTouchPass = inputPass && input != null && input.DirectTouchFallbackEnabled;
+
+                bool deterministicMappingPass = false;
+                if (input != null)
+                {
+                    input.EvaluateButtonStatesForValidation(
+                        leftPressed: true,
+                        rightPressed: false,
+                        acceleratePressed: true,
+                        brakeReversePressed: false,
+                        interact: true,
+                        out float steering,
+                        out float throttle,
+                        out float brake,
+                        out bool interact);
+
+                    bool comboPass = Mathf.Approximately(steering, -1f) &&
+                                     Mathf.Approximately(throttle, 1f) &&
+                                     Mathf.Approximately(brake, 0f) &&
+                                     interact;
+
+                    input.EvaluateButtonStatesForValidation(
+                        leftPressed: false,
+                        rightPressed: true,
+                        acceleratePressed: true,
+                        brakeReversePressed: true,
+                        interact: false,
+                        out steering,
+                        out throttle,
+                        out brake,
+                        out interact);
+
+                    bool conflictPass = Mathf.Approximately(steering, 1f) &&
+                                        Mathf.Approximately(throttle, 0f) &&
+                                        Mathf.Approximately(brake, 1f) &&
+                                        !interact;
+                    deterministicMappingPass = comboPass && conflictPass;
+                }
 
                 bool debugAdapterPass = vehiclePass &&
                                         (!vehicle.TryGetComponent(out VehicleDebugInput debugInput) || !debugInput.enabled);
 
-                bool allPass = vehiclePass && canvasPass && inputPass && controlsPass && fiveButtonsPass && eventSystemPass && debugAdapterPass;
+                bool allPass = vehiclePass &&
+                               canvasPass &&
+                               inputPass &&
+                               controlsPass &&
+                               fiveButtonsPass &&
+                               authoredVisualsPass &&
+                               eventSystemPass &&
+                               directTouchPass &&
+                               deterministicMappingPass &&
+                               debugAdapterPass;
 
                 string message =
                     "[Beyond The Beat] Phase 0 mobile-controls validation\n" +
@@ -145,7 +270,10 @@ namespace BeyondTheBeat.Editor
                     $"MobileDrivingInput attached: {PassFail(inputPass)}\n" +
                     $"All input references assigned: {PassFail(controlsPass)}\n" +
                     $"Five touch controls present: {PassFail(fiveButtonsPass)}\n" +
-                    $"Input System UI module: {PassFail(eventSystemPass)}\n" +
+                    $"Authored control sprites/hit targets: {PassFail(authoredVisualsPass)}\n" +
+                    $"Input System UI module present: {PassFail(eventSystemPass)}\n" +
+                    $"Direct Touchscreen fallback enabled: {PassFail(directTouchPass)}\n" +
+                    $"Deterministic multitouch mapping: {PassFail(deterministicMappingPass)}\n" +
                     $"Legacy debug adapter disabled: {PassFail(debugAdapterPass)}";
 
                 if (allPass)
@@ -166,15 +294,94 @@ namespace BeyondTheBeat.Editor
             }
         }
 
-        private static TouchHoldButton CreateControlButton(
+        private static void CreateControlDock(
+            Transform parent,
+            string name,
+            Vector2 anchor,
+            Vector2 anchoredPosition,
+            Vector2 size)
+        {
+            GameObject dock = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            dock.transform.SetParent(parent, false);
+
+            RectTransform rect = dock.GetComponent<RectTransform>();
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = anchor.x > 0.5f ? new Vector2(1f, 0f) : new Vector2(0f, 0f);
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
+
+            Image image = dock.GetComponent<Image>();
+            image.sprite = MobileUiTheme.RoundedRectSprite;
+            image.type = Image.Type.Sliced;
+            image.color = new Color(0.02f, 0.035f, 0.055f, 0.34f);
+            image.raycastTarget = false;
+        }
+
+        private static TouchHoldButton CreateCircleControl(
+            Transform parent,
+            string name,
+            string label,
+            Vector2 anchoredPosition,
+            float size,
+            Anchor anchor,
+            Color normalColor,
+            Color pressedColor)
+        {
+            return CreateControl(
+                parent,
+                name,
+                label,
+                anchoredPosition,
+                new Vector2(size, size),
+                anchor,
+                MobileUiTheme.CircleSprite,
+                normalColor,
+                pressedColor,
+                label.Length <= 2 ? 72 : 27);
+        }
+
+        private static TouchHoldButton CreatePillControl(
             Transform parent,
             string name,
             string label,
             Vector2 anchoredPosition,
             Vector2 size,
-            Anchor anchor)
+            Anchor anchor,
+            Color normalColor,
+            Color pressedColor)
         {
-            GameObject buttonObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(TouchHoldButton));
+            return CreateControl(
+                parent,
+                name,
+                label,
+                anchoredPosition,
+                size,
+                anchor,
+                MobileUiTheme.RoundedRectSprite,
+                normalColor,
+                pressedColor,
+                25);
+        }
+
+        private static TouchHoldButton CreateControl(
+            Transform parent,
+            string name,
+            string label,
+            Vector2 anchoredPosition,
+            Vector2 size,
+            Anchor anchor,
+            Sprite sprite,
+            Color normalColor,
+            Color pressedColor,
+            int fontSize)
+        {
+            GameObject buttonObject = new GameObject(
+                name,
+                typeof(RectTransform),
+                typeof(CanvasRenderer),
+                typeof(Image),
+                typeof(TouchHoldButton));
             buttonObject.transform.SetParent(parent, false);
 
             RectTransform rect = buttonObject.GetComponent<RectTransform>();
@@ -186,8 +393,15 @@ namespace BeyondTheBeat.Editor
             rect.sizeDelta = size;
 
             Image image = buttonObject.GetComponent<Image>();
-            image.color = new Color(0.08f, 0.10f, 0.14f, 0.72f);
+            image.sprite = sprite;
+            image.type = sprite == MobileUiTheme.RoundedRectSprite ? Image.Type.Sliced : Image.Type.Simple;
+            image.color = normalColor;
             image.raycastTarget = true;
+
+            Outline outline = buttonObject.AddComponent<Outline>();
+            outline.effectColor = new Color(0.32f, 0.86f, 0.94f, 0.24f);
+            outline.effectDistance = new Vector2(3f, -3f);
+            outline.useGraphicAlpha = true;
 
             GameObject labelObject = new GameObject("Label", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
             labelObject.transform.SetParent(buttonObject.transform, false);
@@ -195,21 +409,28 @@ namespace BeyondTheBeat.Editor
             RectTransform labelRect = labelObject.GetComponent<RectTransform>();
             labelRect.anchorMin = Vector2.zero;
             labelRect.anchorMax = Vector2.one;
-            labelRect.offsetMin = Vector2.zero;
-            labelRect.offsetMax = Vector2.zero;
+            labelRect.offsetMin = new Vector2(12f, 10f);
+            labelRect.offsetMax = new Vector2(-12f, -10f);
 
             Text text = labelObject.GetComponent<Text>();
             text.text = label;
             text.alignment = TextAnchor.MiddleCenter;
-            text.fontSize = 30;
+            text.fontSize = fontSize;
             text.resizeTextForBestFit = true;
             text.resizeTextMinSize = 18;
-            text.resizeTextMaxSize = 36;
-            text.color = Color.white;
+            text.resizeTextMaxSize = fontSize;
+            text.fontStyle = FontStyle.Bold;
+            text.color = MobileUiTheme.White;
             text.raycastTarget = false;
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-            return buttonObject.GetComponent<TouchHoldButton>();
+            Shadow shadow = labelObject.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0f, 0f, 0f, 0.55f);
+            shadow.effectDistance = new Vector2(2f, -2f);
+
+            TouchHoldButton button = buttonObject.GetComponent<TouchHoldButton>();
+            button.ConfigureVisual(image, normalColor, pressedColor);
+            return button;
         }
 
         private static void EnsureEventSystem(Scene scene)
@@ -270,6 +491,14 @@ namespace BeyondTheBeat.Editor
             }
 
             property.objectReferenceValue = value;
+        }
+
+        private static void StretchFullScreen(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
         }
 
         private static GameObject FindRootObject(Scene scene, string name)
