@@ -19,14 +19,17 @@ namespace BeyondTheBeat.Editor
         {
             "Beyond The Beat/Phase 1/Build MVP World Foundation",
             "Beyond The Beat/Phase 1/Build Reach Location Mission",
-            "Beyond The Beat/Phase 1/Build Local Save Resume"
+            "Beyond The Beat/Phase 1/Build Local Save Resume",
+            "Beyond The Beat/Phase 1/Build Mission HUD"
         };
 
         private static readonly string[] Phase1ValidationSteps =
         {
             "Beyond The Beat/Phase 1/Validate MVP World Foundation",
             "Beyond The Beat/Phase 1/Validate Reach Location Mission",
-            "Beyond The Beat/Phase 1/Validate Local Save Resume"
+            "Beyond The Beat/Phase 1/Validate Local Save Resume",
+            "Beyond The Beat/Phase 1/Validate Mission HUD",
+            "Beyond The Beat/Phase 1/Validate MVP Exit Gate"
         };
 
         private static int capturedErrors;
@@ -34,8 +37,9 @@ namespace BeyondTheBeat.Editor
 
         /// <summary>
         /// Phase 1 GameCI entry point.
-        /// Rebuilds Phase 0, derives the Phase 1 world, adds mission + local persistence slices,
-        /// runs structural/data validators, then builds a Development Android APK.
+        /// Rebuilds Phase 0, derives the Phase 1 world, adds mission, persistence, and HUD slices,
+        /// runs all repository-side exit validators, then builds the final Phase 1 Development APK candidate.
+        /// Physical Android install/input/performance validation remains a separate manual gate.
         /// </summary>
         public static void BuildAndroid()
         {
@@ -88,8 +92,8 @@ namespace BeyondTheBeat.Editor
 
         private static void PrepareMvpInternal()
         {
-            Debug.Log("[Beyond The Beat] Starting Phase 1 MVP CI preparation.");
-            AppendDiagnostic("Phase 1 MVP preparation START.");
+            Debug.Log("[Beyond The Beat] Starting Phase 1 MVP exit-gate CI preparation.");
+            AppendDiagnostic("Phase 1 MVP exit-gate preparation START.");
 
             AppendDiagnostic("Rebuilding Phase 0 prerequisite foundation.");
             Phase0BuildAutomation.PreparePrototype();
@@ -125,10 +129,12 @@ namespace BeyondTheBeat.Editor
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
 
-            AppendDiagnostic("Phase 1 MVP preparation PASS.");
+            AppendDiagnostic("Phase 1 MVP exit-gate preparation PASS.");
             Debug.Log(
-                "[Beyond The Beat] Phase 1 MVP CI preparation PASS. " +
-                "World/zone, Reach Location mission, and centralized local save/resume are generated and structurally validated.");
+                "[Beyond The Beat] Phase 1 MVP exit-gate CI preparation PASS. " +
+                "World/zone, Reach Location mission, centralized save/resume, Mission HUD, free-roam semantics, " +
+                "and inherited mobile-driving/parking structure are repository-validated. " +
+                "Physical Android validation is still required for final Phase 1 sign-off.");
         }
 
         private static void BuildDevelopmentAndroidApk()
@@ -137,7 +143,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase1-save-resume-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase1-MVP-exit-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -164,7 +170,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 1 Save/Resume development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 1 MVP exit candidate APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -191,9 +197,10 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
 
             Debug.Log(
-                "[Beyond The Beat] Phase 1 Save/Resume Android APK build PASS. " +
+                "[Beyond The Beat] Phase 1 MVP exit candidate Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
-                $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
+                $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}. " +
+                "This is a device-validation candidate, not a final Phase 1 PASS by itself.");
         }
 
         private static string StageApkInsideProject(string outputPath)
