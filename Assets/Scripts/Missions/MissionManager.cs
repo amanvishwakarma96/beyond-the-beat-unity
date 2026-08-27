@@ -30,6 +30,7 @@ namespace BeyondTheBeat.Missions
 
         public MissionDefinition StartingMission => startingMission;
         public MissionDefinition CurrentMission => currentMission;
+        public string CurrentMissionId => currentMission != null ? currentMission.MissionId : string.Empty;
         public MissionState State => state;
         public GameObject PlayerActor => playerActor;
         public int ObservedZoneCount => observedZones != null ? observedZones.Length : 0;
@@ -47,7 +48,7 @@ namespace BeyondTheBeat.Missions
 
         private void Start()
         {
-            if (startOnPlay && startingMission != null)
+            if (startOnPlay && startingMission != null && currentMission == null)
             {
                 StartMission(startingMission);
             }
@@ -74,6 +75,37 @@ namespace BeyondTheBeat.Missions
                 $"objective={mission.ObjectiveType}, targetZone='{mission.TargetZoneId}'.");
 
             MissionStarted?.Invoke(mission);
+            return true;
+        }
+
+        public bool RestoreMissionState(string missionId, MissionState restoredState)
+        {
+            if (restoredState == MissionState.Inactive || string.IsNullOrWhiteSpace(missionId))
+            {
+                ClearMission();
+                return restoredState == MissionState.Inactive;
+            }
+
+            if (restoredState != MissionState.Active &&
+                restoredState != MissionState.Completed &&
+                restoredState != MissionState.Failed)
+            {
+                Debug.LogWarning($"[Beyond The Beat] Mission restore rejected unsupported state {restoredState}.");
+                return false;
+            }
+
+            MissionDefinition mission = ResolveMissionById(missionId);
+            if (mission == null)
+            {
+                Debug.LogWarning($"[Beyond The Beat] Mission restore could not resolve id '{missionId}'.");
+                return false;
+            }
+
+            currentMission = mission;
+            SetState(restoredState);
+
+            Debug.Log(
+                $"[Beyond The Beat] Mission state RESTORED: id='{mission.MissionId}', state={restoredState}.");
             return true;
         }
 
@@ -127,6 +159,23 @@ namespace BeyondTheBeat.Missions
             Debug.Log(
                 $"[Beyond The Beat] Mission COMPLETED: id='{completedMission.MissionId}'. " +
                 "Free roam remains available.");
+        }
+
+        private MissionDefinition ResolveMissionById(string missionId)
+        {
+            if (currentMission != null &&
+                string.Equals(currentMission.MissionId, missionId, StringComparison.Ordinal))
+            {
+                return currentMission;
+            }
+
+            if (startingMission != null &&
+                string.Equals(startingMission.MissionId, missionId, StringComparison.Ordinal))
+            {
+                return startingMission;
+            }
+
+            return null;
         }
 
         private void SetState(MissionState newState)
