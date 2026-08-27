@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   build-mvp-exit:
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'phase2/') }}
     name: Build Phase 1 MVP exit candidate APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -108,20 +109,10 @@ jobs:
           set -euo pipefail
 
           EXPECTED_APK="BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}.apk"
-          APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-            -type f \
-            -name "${EXPECTED_APK}" \
-            -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-            -not -path "${GITHUB_WORKSPACE}/Library/*" \
-            -print -quit)"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name "${EXPECTED_APK}" -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
 
           if [[ -z "${APK_PATH}" ]]; then
-            APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-              -type f \
-              -name '*.apk' \
-              -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-              -not -path "${GITHUB_WORKSPACE}/Library/*" \
-              -print -quit)"
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
@@ -158,12 +149,7 @@ jobs:
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          Scope: Phase 1 Issues #27-#30 integrated MVP candidate: world/zone, Reach Location mission,
-          local save/resume, mission HUD, free-roam semantics, and inherited mobile-driving/parking regression checks.
-
-          IMPORTANT: CI success proves deterministic generation/validation/build only. Final Phase 1 PASS/PASS WITH ACCEPTED
-          KNOWN ISSUES requires physical Android install, launch, touch-control, mission, save/resume, parking, and performance evidence
-          recorded in Docs/Validation/PHASE_1_VALIDATION.md.
+          IMPORTANT: CI success proves deterministic generation/validation/build only.
           EOF
 
           {
@@ -194,6 +180,5 @@ jobs:
             echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
-            echo "- Repository-side Issue #30 integration checks: completed in Unity build automation."
             echo "- Final Phase 1 sign-off: pending physical Android validation report."
           } >> "${GITHUB_STEP_SUMMARY}"
