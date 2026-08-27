@@ -20,6 +20,7 @@ namespace BeyondTheBeat.Editor
         private const string TitleName = "MissionTitle";
         private const string ObjectiveName = "MissionObjective";
         private const string StatusName = "MissionStatus";
+        private const string ProgressRootName = "MissionProgress";
 
         [MenuItem("Beyond The Beat/Phase 1/Build Mission HUD")]
         public static void BuildMissionHud()
@@ -64,39 +65,35 @@ namespace BeyondTheBeat.Editor
             panelRect.anchorMin = new Vector2(0f, 1f);
             panelRect.anchorMax = new Vector2(0f, 1f);
             panelRect.pivot = new Vector2(0f, 1f);
-            panelRect.anchoredPosition = new Vector2(24f, -24f);
-            panelRect.sizeDelta = new Vector2(620f, 190f);
+            panelRect.anchoredPosition = new Vector2(28f, -28f);
+            panelRect.sizeDelta = new Vector2(580f, 210f);
 
             Image panelImage = panel.GetComponent<Image>();
-            panelImage.color = new Color(0.035f, 0.045f, 0.065f, 0.88f);
+            panelImage.sprite = MobileUiTheme.RoundedRectSprite;
+            panelImage.type = Image.Type.Sliced;
+            panelImage.color = new Color(0.025f, 0.045f, 0.07f, 0.93f);
             panelImage.raycastTarget = false;
 
-            Text title = CreateText(
-                panel.transform,
-                TitleName,
-                new Vector2(18f, -56f),
-                new Vector2(-18f, -14f),
-                30,
-                FontStyle.Bold,
-                TextAnchor.MiddleLeft);
+            CreateAccentBar(panel.transform);
 
-            Text objective = CreateText(
-                panel.transform,
-                ObjectiveName,
-                new Vector2(18f, -142f),
-                new Vector2(-18f, -58f),
-                24,
-                FontStyle.Normal,
-                TextAnchor.UpperLeft);
+            Text eyebrow = CreateText(panel.transform, "MissionEyebrow", 14, FontStyle.Bold, TextAnchor.MiddleLeft);
+            eyebrow.text = "CURRENT OBJECTIVE";
+            eyebrow.color = MobileUiTheme.Cyan;
+            SetAnchors(eyebrow.rectTransform, new Vector2(0.055f, 0.82f), new Vector2(0.95f, 0.98f), Vector2.zero, Vector2.zero);
 
-            Text status = CreateText(
-                panel.transform,
-                StatusName,
-                new Vector2(18f, -176f),
-                new Vector2(-18f, -146f),
-                20,
-                FontStyle.Bold,
-                TextAnchor.MiddleLeft);
+            Text title = CreateText(panel.transform, TitleName, 29, FontStyle.Bold, TextAnchor.MiddleLeft);
+            SetAnchors(title.rectTransform, new Vector2(0.055f, 0.60f), new Vector2(0.95f, 0.84f), Vector2.zero, Vector2.zero);
+
+            Text objective = CreateText(panel.transform, ObjectiveName, 19, FontStyle.Normal, TextAnchor.UpperLeft);
+            objective.color = MobileUiTheme.Muted;
+            SetAnchors(objective.rectTransform, new Vector2(0.055f, 0.30f), new Vector2(0.95f, 0.62f), Vector2.zero, Vector2.zero);
+
+            Text status = CreateText(panel.transform, StatusName, 17, FontStyle.Bold, TextAnchor.MiddleLeft);
+            status.color = MobileUiTheme.Cyan;
+            SetAnchors(status.rectTransform, new Vector2(0.055f, 0.15f), new Vector2(0.95f, 0.31f), Vector2.zero, Vector2.zero);
+
+            ProgressRefs progress = CreateProgressBar(panel.transform);
+            progress.Root.SetActive(false);
 
             MissionHud hud = hudRoot.GetComponent<MissionHud>();
             SerializedObject serialized = new SerializedObject(hud);
@@ -105,6 +102,8 @@ namespace BeyondTheBeat.Editor
             SetObjectReference(serialized, "titleText", title);
             SetObjectReference(serialized, "objectiveText", objective);
             SetObjectReference(serialized, "statusText", status);
+            SetObjectReference(serialized, "progressRoot", progress.Root);
+            SetObjectReference(serialized, "progressFill", progress.Fill);
             serialized.ApplyModifiedPropertiesWithoutUndo();
 
             MissionHudSnapshot initial = MissionHud.CreateSnapshot(null, MissionState.Inactive);
@@ -124,8 +123,7 @@ namespace BeyondTheBeat.Editor
             Selection.activeGameObject = hudRoot;
 
             Debug.Log(
-                "[Beyond The Beat] Phase 1 Mission HUD created. " +
-                "Mission state is event-driven and completed/failed states explicitly release the player to free roam.");
+                "[Beyond The Beat] Authored mission HUD created with compact hierarchy and reusable survival-progress bar.");
         }
 
         [MenuItem("Beyond The Beat/Phase 1/Validate Mission HUD")]
@@ -160,7 +158,9 @@ namespace BeyondTheBeat.Editor
                     hud.PanelRoot != null &&
                     hud.TitleText != null &&
                     hud.ObjectiveText != null &&
-                    hud.StatusText != null;
+                    hud.StatusText != null &&
+                    hud.ProgressRoot != null &&
+                    hud.ProgressFill != null;
 
                 bool referencesPass = structurePass && hud.MissionManager == manager && manager != null;
 
@@ -181,23 +181,40 @@ namespace BeyondTheBeat.Editor
 
                 bool completionPass =
                     complete.Title == "MISSION COMPLETE" &&
-                    complete.Status.IndexOf("FREE ROAM", StringComparison.Ordinal) >= 0 &&
-                    failed.Status.IndexOf("FREE ROAM", StringComparison.Ordinal) >= 0;
+                    complete.Status.IndexOf("COMPLETE", StringComparison.Ordinal) >= 0 &&
+                    failed.Status.IndexOf("FAILED", StringComparison.Ordinal) >= 0;
+
+                bool progressPass = structurePass &&
+                                    hud.ProgressFill.type == Image.Type.Filled &&
+                                    hud.ProgressFill.fillMethod == Image.FillMethod.Horizontal &&
+                                    !hud.ProgressRoot.activeSelf;
 
                 bool nonBlockingPass = structurePass &&
-                                       hud.PanelRoot.TryGetComponent(out Image panelImage) &&
-                                       !panelImage.raycastTarget;
+                                       hud.PanelRoot.GetComponentsInChildren<Image>(true).All(image => !image.raycastTarget);
 
-                bool allPass = structurePass && referencesPass && freeRoamPass && activePass && completionPass && nonBlockingPass;
+                bool authoredVisualsPass = structurePass &&
+                                           hud.PanelRoot.TryGetComponent(out Image authoredPanel) &&
+                                           authoredPanel.sprite != null;
+
+                bool allPass = structurePass &&
+                               referencesPass &&
+                               freeRoamPass &&
+                               activePass &&
+                               completionPass &&
+                               progressPass &&
+                               nonBlockingPass &&
+                               authoredVisualsPass;
 
                 string message =
-                    "[Beyond The Beat] Phase 1 Mission HUD validation\n" +
-                    $"HUD structure/text references: {PassFail(structurePass)}\n" +
+                    "[Beyond The Beat] Phase 1 authored Mission HUD validation\n" +
+                    $"HUD structure/text/progress references: {PassFail(structurePass)}\n" +
                     $"MissionManager source reference: {PassFail(referencesPass)}\n" +
                     $"Free-roam view state: {PassFail(freeRoamPass)}\n" +
                     $"Active mission view state: {PassFail(activePass)}\n" +
-                    $"Completed/failed free-roam state: {PassFail(completionPass)}\n" +
-                    $"HUD does not block touch input: {PassFail(nonBlockingPass)}";
+                    $"Completed/failed view state: {PassFail(completionPass)}\n" +
+                    $"Survival progress presentation: {PassFail(progressPass)}\n" +
+                    $"HUD does not block touch input: {PassFail(nonBlockingPass)}\n" +
+                    $"Authored rounded presentation: {PassFail(authoredVisualsPass)}";
 
                 if (allPass)
                 {
@@ -217,11 +234,58 @@ namespace BeyondTheBeat.Editor
             }
         }
 
+        private static ProgressRefs CreateProgressBar(Transform parent)
+        {
+            GameObject root = new GameObject(ProgressRootName, typeof(RectTransform));
+            root.transform.SetParent(parent, false);
+            RectTransform rootRect = root.GetComponent<RectTransform>();
+            SetAnchors(rootRect, new Vector2(0.055f, 0.055f), new Vector2(0.95f, 0.115f), Vector2.zero, Vector2.zero);
+
+            GameObject trackObject = new GameObject("Track", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            trackObject.transform.SetParent(root.transform, false);
+            StretchFullScreen(trackObject.GetComponent<RectTransform>());
+            Image track = trackObject.GetComponent<Image>();
+            track.sprite = MobileUiTheme.RoundedRectSprite;
+            track.type = Image.Type.Sliced;
+            track.color = new Color(0.08f, 0.13f, 0.18f, 1f);
+            track.raycastTarget = false;
+
+            GameObject fillObject = new GameObject("Fill", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            fillObject.transform.SetParent(root.transform, false);
+            StretchFullScreen(fillObject.GetComponent<RectTransform>());
+            Image fill = fillObject.GetComponent<Image>();
+            fill.sprite = MobileUiTheme.RoundedRectSprite;
+            fill.type = Image.Type.Filled;
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = 0;
+            fill.fillAmount = 0f;
+            fill.color = MobileUiTheme.Cyan;
+            fill.raycastTarget = false;
+
+            return new ProgressRefs(root, fill);
+        }
+
+        private static void CreateAccentBar(Transform parent)
+        {
+            GameObject accent = new GameObject("Accent", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            accent.transform.SetParent(parent, false);
+            RectTransform rect = accent.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0f, 0.12f);
+            rect.anchorMax = new Vector2(0f, 0.88f);
+            rect.pivot = new Vector2(0f, 0.5f);
+            rect.anchoredPosition = new Vector2(9f, 0f);
+            rect.sizeDelta = new Vector2(6f, 0f);
+
+            Image image = accent.GetComponent<Image>();
+            image.sprite = MobileUiTheme.RoundedRectSprite;
+            image.type = Image.Type.Sliced;
+            image.color = MobileUiTheme.Cyan;
+            image.raycastTarget = false;
+        }
+
         private static Text CreateText(
             Transform parent,
             string name,
-            Vector2 offsetMin,
-            Vector2 offsetMax,
             int fontSize,
             FontStyle fontStyle,
             TextAnchor alignment)
@@ -229,23 +293,29 @@ namespace BeyondTheBeat.Editor
             GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
             textObject.transform.SetParent(parent, false);
 
-            RectTransform rect = textObject.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
-            rect.pivot = new Vector2(0.5f, 1f);
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
-
             Text text = textObject.GetComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             text.fontSize = fontSize;
             text.fontStyle = fontStyle;
             text.alignment = alignment;
-            text.color = Color.white;
+            text.color = MobileUiTheme.White;
             text.horizontalOverflow = HorizontalWrapMode.Wrap;
             text.verticalOverflow = VerticalWrapMode.Truncate;
             text.raycastTarget = false;
             return text;
+        }
+
+        private static void SetAnchors(
+            RectTransform rect,
+            Vector2 anchorMin,
+            Vector2 anchorMax,
+            Vector2 offsetMin,
+            Vector2 offsetMax)
+        {
+            rect.anchorMin = anchorMin;
+            rect.anchorMax = anchorMax;
+            rect.offsetMin = offsetMin;
+            rect.offsetMax = offsetMax;
         }
 
         private static void StretchFullScreen(RectTransform rect)
@@ -273,5 +343,17 @@ namespace BeyondTheBeat.Editor
         }
 
         private static string PassFail(bool value) => value ? "PASS" : "FAIL";
+
+        private readonly struct ProgressRefs
+        {
+            public ProgressRefs(GameObject root, Image fill)
+            {
+                Root = root;
+                Fill = fill;
+            }
+
+            public GameObject Root { get; }
+            public Image Fill { get; }
+        }
     }
 }
