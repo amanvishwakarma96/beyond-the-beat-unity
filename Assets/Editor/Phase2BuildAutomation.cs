@@ -27,7 +27,7 @@ namespace BeyondTheBeat.Editor
             Application.logMessageReceived += CaptureLog;
             try
             {
-                PrepareForestSurvivalInternal();
+                PrepareReachAndSurviveInternal();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic("BuildAndroid PASS.");
             }
@@ -73,6 +73,21 @@ namespace BeyondTheBeat.Editor
             }
         }
 
+        public static void PrepareReachAndSurvive()
+        {
+            InitializeDiagnostics();
+            Application.logMessageReceived += CaptureLog;
+            try
+            {
+                PrepareReachAndSurviveInternal();
+                AppendDiagnostic("PrepareReachAndSurvive PASS.");
+            }
+            finally
+            {
+                Application.logMessageReceived -= CaptureLog;
+            }
+        }
+
         private static void PrepareForestFoundationInternal()
         {
             Debug.Log("[Beyond The Beat] Starting Phase 2 forest-foundation CI preparation.");
@@ -99,10 +114,23 @@ namespace BeyondTheBeat.Editor
             EnsurePhase2SceneAndSettings();
 
             AppendDiagnostic("Phase 2 forest survival preparation PASS.");
+        }
+
+        private static void PrepareReachAndSurviveInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 2 Reach + Survive CI preparation.");
+            AppendDiagnostic("Phase 2 Reach + Survive preparation START.");
+
+            PrepareForestSurvivalInternal();
+            ExecuteMenuStep("Beyond The Beat/Phase 2/Build Reach + Survive Mission");
+            ExecuteMenuStep("Beyond The Beat/Phase 2/Validate Reach + Survive Mission");
+            EnsurePhase2SceneAndSettings();
+
+            AppendDiagnostic("Phase 2 Reach + Survive preparation PASS.");
             Debug.Log(
-                "[Beyond The Beat] Phase 2 forest-survival CI preparation PASS. " +
-                "The integrated Phase 1 loop, Forest ZoneContext, reusable survival resource, and event-driven forest pressure/recovery are validated. " +
-                "Reach + Survive mission orchestration remains Issue #37.");
+                "[Beyond The Beat] Phase 2 Reach + Survive CI preparation PASS. " +
+                "Phase 1 Reach Location regression, Forest ZoneContext, survival pressure, timed mission progress, depletion failure, and HUD progress are validated. " +
+                "Final Phase 2 integration/device validation remains Issue #38.");
         }
 
         private static void EnsurePhase2SceneAndSettings()
@@ -135,7 +163,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase2-survival-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase2-reach-survive-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -162,7 +190,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 2 Forest Survival development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 2 Reach + Survive development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -189,7 +217,7 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
 
             Debug.Log(
-                "[Beyond The Beat] Phase 2 Forest Survival Android APK build PASS. " +
+                "[Beyond The Beat] Phase 2 Reach + Survive Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
         }
