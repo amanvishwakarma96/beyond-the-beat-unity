@@ -1,100 +1,106 @@
-# Phase 1 Mission Foundation
+# Mission System
 
-Issue #28 introduces the first data-driven mission flow for the Phase 1 MVP.
+The mission layer is data-driven and keeps objective rules out of vehicle, zone, interaction, survival, and UI components.
 
-## Runtime responsibilities
+## `MissionDefinition`
 
-### `MissionDefinition`
-
-A ScriptableObject containing mission data only:
+Mission data is stored in ScriptableObjects with:
 
 - stable mission ID
 - display name and description
 - objective type
-- target zone ID
+- target `ZoneContext` ID
+- optional survival duration for timed survival objectives
 
-The first supported objective type is `ReachLocation`.
+Supported objective types:
 
-### `MissionObjectiveEvaluator`
+- `ReachLocation` — completes when the configured player enters the configured target zone.
+- `ReachAndSurvive` — requires the configured player to enter the target zone and remain under the configured survival pressure for the configured continuous duration.
 
-Evaluates whether a reusable world event satisfies the configured mission objective. For Reach Location it requires:
+`ReachLocation` keeps serialized enum value `0`; `ReachAndSurvive` is additive at value `1`.
 
-- the event actor is the configured player actor
-- the entered `ZoneContext.ZoneId` matches the mission's target zone ID
+## `MissionObjectiveEvaluator`
 
-This keeps mission-specific conditionals out of `ZoneContext`, the vehicle controller, camera, and interaction systems.
+`IsTargetZone(...)` performs the shared actor + stable zone-ID match. `IsSatisfied(...)` remains the completion evaluator for the original Reach Location objective, preserving the Phase 1 behavior unchanged.
 
-### `MissionManager`
+## `MissionManager`
 
-Owns the mission lifecycle:
+The manager owns mission lifecycle and objective progress:
 
 ```text
 Inactive -> Active -> Completed
                    -> Failed
 ```
 
-It subscribes to configured `ZoneContext.ActorEntered` events. There is no per-frame mission polling.
+For `ReachLocation`, a matching `ZoneContext.ActorEntered` event completes the mission immediately.
 
-Completing or failing a mission does not disable the vehicle or world. Free roam therefore remains available with no active mission and after completion.
-
-## Generated sample mission
-
-Run:
+For `ReachAndSurvive`:
 
 ```text
-Beyond The Beat > Phase 1 > Build Reach Location Mission
+Active mission
+    ↓
+Target ZoneContext entered by player
+    ↓
+TargetContextActive = true
+    ↓
+ForestSurvivalController pressure active
+    ↓
+Timed progress accumulates
+    ↓
+Required duration reached -> Completed
+
+Target exit -> progress resets to 0
+Resource depleted while target active -> Failed
 ```
 
-The builder creates/updates:
+The timer runs only while all required objective state is active. It does not discover objects per frame. Zone transitions and depletion are event-driven, while `TickMission(deltaTime)` provides deterministic timed progress and is called by the manager's runtime `Update()`.
+
+`MissionProgressChanged` is throttled for presentation updates so the HUD does not need to poll gameplay objects every frame.
+
+Completing or failing a mission does not disable the vehicle or world; free roam remains available.
+
+## Phase 1 sample
 
 ```text
 Assets/Settings/Missions/Phase1_ReachOffRoadCheckpoint.asset
 ```
 
-and adds `Phase1MissionSystem` to:
+Build/validate with:
 
 ```text
-Assets/Scenes/Phase1/Phase1_MVP.unity
-```
-
-The sample mission starts automatically in Play Mode and targets the dedicated off-road checkpoint zone:
-
-```text
-phase1-offroad-checkpoint
-```
-
-The target is represented by a visible cyan marker inside the off-road area. Entering the dedicated checkpoint with `PrototypeVehicle` completes the active mission and leaves driving/free roam enabled.
-
-## Validation
-
-Run:
-
-```text
+Beyond The Beat > Phase 1 > Build Reach Location Mission
 Beyond The Beat > Phase 1 > Validate Reach Location Mission
 ```
 
-The validator checks:
+## Phase 2 sample
 
-- ScriptableObject mission configuration
-- `MissionManager` mission/player/zone references
-- dedicated target `ZoneContext`
-- visible target marker
-- correct target-zone objective match
-- rejection of the broad off-road zone as the mission target
-- rejection of a non-player actor
-- start and clear lifecycle transitions
+```text
+Assets/Settings/Missions/Phase2_ReachAndSurviveForest.asset
+```
 
-The Phase 1 Android workflow rebuilds and validates both Issue #27 world context and Issue #28 mission configuration before producing the milestone APK.
+The generated sample targets the stable `forest` ZoneContext and requires 8 seconds of continuous survival pressure.
 
-## Scope boundary
+Build/validate with:
 
-Issue #28 intentionally does not add:
+```text
+Beyond The Beat > Phase 2 > Build Reach + Survive Mission
+Beyond The Beat > Phase 2 > Validate Reach + Survive Mission
+```
 
-- local save/resume (`SaveManager`) — Issue #29
-- final mission HUD/status presentation — Issue #30
-- rewards/economy
-- inventory
-- survival or puzzle mechanics
-- backend/login/networking
+The Phase 2 validator checks:
 
-Those systems should consume mission events/state rather than moving their responsibilities into `MissionManager`.
+- ReachAndSurvive ScriptableObject configuration
+- MissionManager player/zone/survival references
+- original Reach Location regression behavior
+- correct target / wrong-zone / wrong-actor matching
+- no completion before the survival duration
+- completion after the required duration
+- continuous-progress reset on target exit
+- depletion failure path
+- HUD reach-stage and survival-progress presentation
+
+## Architecture boundary
+
+Mission code does not add forest-specific conditionals to `VehicleController`, `ZoneContext`, or `MissionHud`. The manager consumes reusable `ForestSurvivalController`/`SurvivalResource` state and events as an objective source; the HUD consumes only mission state/progress.
+
+Final Phase 2 persistence of in-progress survival timing plus integrated Android/performance/device sign-off belongs to Issue #38.

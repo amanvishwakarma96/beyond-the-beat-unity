@@ -1,4 +1,4 @@
-name: Phase 2 Forest Survival Android
+name: Phase 2 Reach + Survive Android
 
 on:
   workflow_dispatch:
@@ -16,12 +16,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase2-forest-survival-${{ github.ref }}
+  group: phase2-reach-survive-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-forest-survival:
-    name: Build Phase 2 Forest Survival APK
+  build-reach-survive:
+    name: Build Phase 2 Reach + Survive APK
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -55,9 +55,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Phase2-Survival-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          key: Library-Phase2-ReachSurvive-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
-      - name: Generate, validate, and build Phase 2 Forest Survival APK
+      - name: Generate, validate, and build Phase 2 Reach + Survive APK
         id: unity-build
         uses: game-ci/unity-builder@v5.0.0
         env:
@@ -69,7 +69,7 @@ jobs:
           targetPlatform: Android
           unityVersion: auto
           buildMethod: BeyondTheBeat.Editor.Phase2BuildAutomation.BuildAndroid
-          buildName: BeyondTheBeat-Phase2-Survival-${{ github.run_number }}
+          buildName: BeyondTheBeat-Phase2-ReachSurvive-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
           version: 0.2.${{ github.run_number }}
@@ -81,12 +81,12 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "=== Beyond The Beat Phase 2 Forest Survival diagnostics ==="
+          echo "=== Beyond The Beat Phase 2 Reach + Survive diagnostics ==="
           DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase2-ci-diagnostics.log"
           if [[ -f "${DIAGNOSTICS}" ]]; then
             grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
             echo "--- diagnostics tail ---"
-            tail -n 320 "${DIAGNOSTICS}"
+            tail -n 360 "${DIAGNOSTICS}"
           else
             echo "No Phase 2 diagnostics file was produced."
           fi
@@ -95,19 +95,19 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: Phase2-Survival-CI-Diagnostics-${{ github.run_number }}
+          name: Phase2-ReachSurvive-CI-Diagnostics-${{ github.run_number }}
           path: build/phase2-ci-diagnostics.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0
 
-      - name: Create Phase 2 Survival artifact manifest
+      - name: Create Phase 2 Reach + Survive artifact manifest
         id: manifest
         shell: bash
         run: |
           set -euo pipefail
 
-          EXPECTED_APK="BeyondTheBeat-Phase2-Survival-${GITHUB_RUN_NUMBER}.apk"
+          EXPECTED_APK="BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}.apk"
           APK_PATH="$(find "${GITHUB_WORKSPACE}" \
             -type f \
             -name "${EXPECTED_APK}" \
@@ -125,16 +125,16 @@ jobs:
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
-            echo "::error::Unity completed without a discoverable Phase 2 Forest Survival APK."
+            echo "::error::Unity completed without a discoverable Phase 2 Reach + Survive APK."
             find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
             exit 1
           fi
 
-          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase2Survival"
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase2ReachSurvive"
           rm -rf "${STAGE_DIR}"
           mkdir -p "${STAGE_DIR}"
 
-          APK_FILE="BeyondTheBeat-Phase2-Survival-${GITHUB_RUN_NUMBER}.apk"
+          APK_FILE="BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
 
@@ -145,9 +145,9 @@ jobs:
 
           printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
 
-          cat > "${STAGE_DIR}/Phase2-Survival-Artifact-Manifest.txt" <<EOF
-          Beyond The Beat — Phase 2 Forest Survival Artifact
-          Artifact name: BeyondTheBeat-Phase2-Survival-${GITHUB_RUN_NUMBER}
+          cat > "${STAGE_DIR}/Phase2-ReachSurvive-Artifact-Manifest.txt" <<EOF
+          Beyond The Beat — Phase 2 Reach + Survive Artifact
+          Artifact name: BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}
           APK file: ${APK_FILE}
           APK size (bytes): ${APK_SIZE_BYTES}
           SHA-256: ${APK_SHA256}
@@ -158,25 +158,26 @@ jobs:
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-          Scope: Phase 2 Issue #36 reusable survival resource + event-driven forest environmental pressure/recovery on top of Issue #35.
-          Reach + Survive mission and final Phase 2 integration/validation remain Issues #37 and #38.
+          Scope: Phase 2 Issue #37 data-driven Reach + Survive mission on top of Issues #35 and #36.
+          Validation covers Reach Location regression, target-zone gating, continuous survival duration, exit reset, depletion failure, and HUD progress presentation.
+          Final Phase 2 persistence/integration/performance/device validation remains Issue #38.
           Phase 1 Issue #30 still requires physical Android sign-off; Phase 2 development is proceeding by explicit project-owner instruction.
           EOF
 
           {
-            echo "artifact_name=BeyondTheBeat-Phase2-Survival-${GITHUB_RUN_NUMBER}"
-            echo "apk_path=artifact/Phase2Survival/${APK_FILE}"
+            echo "artifact_name=BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}"
+            echo "apk_path=artifact/Phase2ReachSurvive/${APK_FILE}"
             echo "sha256=${APK_SHA256}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Upload Phase 2 Survival artifact
+      - name: Upload Phase 2 Reach + Survive artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.manifest.outputs.artifact_name }}
           path: |
-            artifact/Phase2Survival/BeyondTheBeat-Phase2-Survival-${{ github.run_number }}.apk
-            artifact/Phase2Survival/Phase2-Survival-Artifact-Manifest.txt
-            artifact/Phase2Survival/SHA256SUMS.txt
+            artifact/Phase2ReachSurvive/BeyondTheBeat-Phase2-ReachSurvive-${{ github.run_number }}.apk
+            artifact/Phase2ReachSurvive/Phase2-ReachSurvive-Artifact-Manifest.txt
+            artifact/Phase2ReachSurvive/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -185,12 +186,12 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Beyond The Beat — Phase 2 Forest Survival"
+            echo "## Beyond The Beat — Phase 2 Reach + Survive"
             echo
             echo "- Artifact: \`${{ steps.manifest.outputs.artifact_name }}\`"
             echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
-            echo "- Scope: Issue #36 resource + forest pressure/recovery; Reach + Survive remains #37."
+            echo "- Scope: Issue #37 Reach + Survive mission; final Phase 2 exit remains #38."
             echo "- Phase 1 physical Android exit sign-off remains pending under Issue #30."
           } >> "${GITHUB_STEP_SUMMARY}"

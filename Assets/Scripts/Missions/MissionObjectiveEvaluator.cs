@@ -12,6 +12,20 @@ namespace BeyondTheBeat.Missions
             GameObject actor,
             GameObject expectedActor)
         {
+            if (mission == null || mission.ObjectiveType != MissionObjectiveType.ReachLocation)
+            {
+                return false;
+            }
+
+            return IsTargetZone(mission, zone, actor, expectedActor);
+        }
+
+        public static bool IsTargetZone(
+            MissionDefinition mission,
+            ZoneContext zone,
+            GameObject actor,
+            GameObject expectedActor)
+        {
             if (mission == null || !mission.IsConfigured || zone == null || actor == null || expectedActor == null)
             {
                 return false;
@@ -22,16 +36,10 @@ namespace BeyondTheBeat.Missions
                 return false;
             }
 
-            switch (mission.ObjectiveType)
-            {
-                case MissionObjectiveType.ReachLocation:
-                    return string.Equals(
-                        zone.ZoneId,
-                        mission.TargetZoneId,
-                        StringComparison.Ordinal);
-                default:
-                    return false;
-            }
+            return string.Equals(
+                zone.ZoneId,
+                mission.TargetZoneId,
+                StringComparison.Ordinal);
         }
     }
 }
