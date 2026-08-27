@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   build-android-apk:
+    if: ${{ github.event_name != 'pull_request' || !startsWith(github.head_ref, 'phase2/') }}
     name: Build shareable Phase 0 APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -55,10 +56,6 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          # The Library contains compiled Editor assemblies. Key it to the actual C#
-          # source set so renamed/deleted builders can never survive from an older run.
-          # Deliberately do not use restore-keys: a partial fallback can restore stale
-          # Assembly-CSharp-Editor output and make CI execute code absent from HEAD.
           key: Library-Phase0-Android-v2-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
       - name: Generate, validate, and build Android development APK
@@ -113,36 +110,17 @@ jobs:
           set -euo pipefail
 
           EXPECTED_APK="BeyondTheBeat-Phase0-${GITHUB_RUN_NUMBER}.apk"
-          APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-            -type f \
-            -name "${EXPECTED_APK}" \
-            -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-            -not -path "${GITHUB_WORKSPACE}/Library/*" \
-            -print -quit)"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name "${EXPECTED_APK}" -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
 
           if [[ -z "${APK_PATH}" ]]; then
-            APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-              -type f \
-              -name '*.apk' \
-              -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-              -not -path "${GITHUB_WORKSPACE}/Library/*" \
-              -print -quit)"
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
             echo "::error::Unity completed without a discoverable APK in the GitHub workspace."
-            echo "Workspace APK candidates:"
-            find "${GITHUB_WORKSPACE}" \
-              -type f \
-              -name '*.apk' \
-              -not -path "${GITHUB_WORKSPACE}/Library/*" \
-              -print || true
-            echo "Workspace files (depth <= 6):"
-            find "${GITHUB_WORKSPACE}" -maxdepth 6 -type f -print | sort || true
+            find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/Library/*" -print || true
             exit 1
           fi
-
-          echo "Resolved Unity APK: ${APK_PATH}"
 
           STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase0"
           rm -rf "${STAGE_DIR}"
@@ -175,8 +153,6 @@ jobs:
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
           IMPORTANT: Artifact generation does not equal Android device validation.
-          Install/launch, touch controls, drive+park loop, FPS/stutter/GC, and device observations
-          must still be recorded in Docs/Validation/PHASE_0_VALIDATION.md.
           EOF
 
           {
