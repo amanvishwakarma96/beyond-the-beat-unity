@@ -47,7 +47,8 @@ namespace BeyondTheBeat.UI
         {
             MissionHudSnapshot snapshot = CreateSnapshot(
                 missionManager != null ? missionManager.CurrentMission : null,
-                missionManager != null ? missionManager.State : MissionState.Inactive);
+                missionManager != null ? missionManager.State : MissionState.Inactive,
+                missionManager != null ? missionManager.Progress : default);
 
             if (panelRoot != null)
             {
@@ -72,6 +73,21 @@ namespace BeyondTheBeat.UI
 
         public static MissionHudSnapshot CreateSnapshot(MissionDefinition mission, MissionState state)
         {
+            MissionProgressSnapshot progress = mission != null
+                ? new MissionProgressSnapshot(
+                    mission.ObjectiveType,
+                    false,
+                    0f,
+                    mission.SurvivalDurationSeconds)
+                : default;
+            return CreateSnapshot(mission, state, progress);
+        }
+
+        public static MissionHudSnapshot CreateSnapshot(
+            MissionDefinition mission,
+            MissionState state,
+            MissionProgressSnapshot progress)
+        {
             if (mission == null || state == MissionState.Inactive)
             {
                 return new MissionHudSnapshot(
@@ -83,6 +99,11 @@ namespace BeyondTheBeat.UI
             switch (state)
             {
                 case MissionState.Active:
+                    if (mission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
+                    {
+                        return CreateReachAndSurviveSnapshot(mission, progress);
+                    }
+
                     return new MissionHudSnapshot(
                         mission.DisplayName,
                         string.IsNullOrWhiteSpace(mission.Description)
@@ -110,6 +131,30 @@ namespace BeyondTheBeat.UI
             }
         }
 
+        private static MissionHudSnapshot CreateReachAndSurviveSnapshot(
+            MissionDefinition mission,
+            MissionProgressSnapshot progress)
+        {
+            if (!progress.TargetContextActive)
+            {
+                return new MissionHudSnapshot(
+                    mission.DisplayName,
+                    string.IsNullOrWhiteSpace(mission.Description)
+                        ? "Reach the target survival zone."
+                        : mission.Description,
+                    "REACH TARGET ZONE");
+            }
+
+            int elapsed = Mathf.FloorToInt(progress.SurvivalElapsedSeconds);
+            int required = Mathf.CeilToInt(progress.SurvivalRequiredSeconds);
+            int percent = Mathf.RoundToInt(progress.NormalizedProgress * 100f);
+
+            return new MissionHudSnapshot(
+                mission.DisplayName,
+                $"Survive the environmental pressure: {elapsed}/{required}s",
+                $"SURVIVING • {percent}%");
+        }
+
         private void Subscribe()
         {
             if (missionManager == null)
@@ -119,6 +164,8 @@ namespace BeyondTheBeat.UI
 
             missionManager.MissionStateChanged -= HandleMissionStateChanged;
             missionManager.MissionStateChanged += HandleMissionStateChanged;
+            missionManager.MissionProgressChanged -= HandleMissionProgressChanged;
+            missionManager.MissionProgressChanged += HandleMissionProgressChanged;
         }
 
         private void Unsubscribe()
@@ -126,10 +173,16 @@ namespace BeyondTheBeat.UI
             if (missionManager != null)
             {
                 missionManager.MissionStateChanged -= HandleMissionStateChanged;
+                missionManager.MissionProgressChanged -= HandleMissionProgressChanged;
             }
         }
 
         private void HandleMissionStateChanged(MissionDefinition mission, MissionState state)
+        {
+            Refresh();
+        }
+
+        private void HandleMissionProgressChanged(MissionProgressSnapshot progress)
         {
             Refresh();
         }
