@@ -7,7 +7,8 @@ namespace BeyondTheBeat.World
     public enum WorldZoneType
     {
         Urban = 0,
-        OffRoad = 1
+        OffRoad = 1,
+        Forest = 2
     }
 
     [RequireComponent(typeof(Collider))]
