@@ -1,34 +1,10 @@
-# Phase 1 World / Zone Context
+# World / Zone Context
 
-Issue #27 introduces the first persistent-world expansion for Phase 1 while keeping the Phase 0 validation scene unchanged.
-
-## Generated Phase 1 scene
-
-Run:
-
-```text
-Beyond The Beat > Phase 1 > Build MVP World Foundation
-```
-
-The builder regenerates the complete Phase 0 foundation first when used through CI, copies that proven scene to:
-
-```text
-Assets/Scenes/Phase1/Phase1_MVP.unity
-```
-
-and then adds a lightweight Phase 1 world layer containing:
-
-- an Urban/Road context around the existing driving strip and parking interaction
-- a separate Off-road context connected by a simple branch road
-- simple urban building blocks for spatial readability
-- a lightweight off-road surface and bumps for traversal testing
-- reusable `ZoneContext` trigger components
-
-The Phase 0 scene remains the Phase 0 validation baseline and is not converted into the Phase 1 scene in-place.
+The project uses one persistent world composed of reusable logical zones. `ZoneContext` exposes world context through trigger events so missions, survival, UI, and later mechanics do not need scene-name checks or biome-specific conditionals in vehicle code.
 
 ## `ZoneContext`
 
-`ZoneContext` is a generic world-context trigger. It exposes:
+`ZoneContext` exposes:
 
 - stable `ZoneId`
 - `WorldZoneType`
@@ -39,33 +15,106 @@ The Phase 0 scene remains the Phase 0 validation baseline and is not converted i
 
 The component resolves all colliders belonging to the same attached Rigidbody as one actor. This prevents a multi-collider vehicle from producing duplicate enter/exit events while crossing a zone boundary.
 
-Phase 1 starts with:
+Supported world-zone types now are:
+
+```text
+Urban
+OffRoad
+Forest
+```
+
+`ZoneContext` itself remains generic. It does not know about missions, UI, saving, vehicle physics, survival, puzzles, or scene names.
+
+## Phase 1 world
+
+Run:
+
+```text
+Beyond The Beat > Phase 1 > Build MVP World Foundation
+```
+
+The builder produces:
+
+```text
+Assets/Scenes/Phase1/Phase1_MVP.unity
+```
+
+with the inherited Phase 0 drive/camera/mobile/parking loop plus:
 
 | Zone ID | Type | Purpose |
 | --- | --- | --- |
-| `urban-road` | Urban | Existing road, parking and future first mission start context |
-| `off-road` | OffRoad | Separate traversal context for the MVP open-map slice |
+| `urban-road` | Urban | Road/parking and urban traversal context |
+| `off-road` | OffRoad | Off-road traversal context for the MVP slice |
 
-## Architecture boundary
+The integrated Phase 1 pipeline later adds the Reach Location mission, centralized local save/resume, and mission HUD to that same generated scene.
 
-`ZoneContext` does not know about missions, UI, saving, vehicle physics, survival, puzzles, or scene names. Future systems subscribe to its events or reference a configured zone instead of adding zone-specific conditionals to vehicle/world code.
+## Phase 2 forest foundation
 
-Issue #28 will consume this foundation for the first data-driven Reach Location mission.
+Issue #35 extends the integrated Phase 1 MVP into a separate generated scene:
+
+```text
+Assets/Scenes/Phase2/Phase2_Forest.unity
+```
+
+Run:
+
+```text
+Beyond The Beat > Phase 2 > Build Forest Biome Foundation
+```
+
+The builder copies the integrated Phase 1 scene and adds:
+
+- `Phase2ForestBiome/ForestZone`
+- a drivable forest ground patch east of the existing off-road area
+- a visible forest trail
+- an off-road-to-forest connector
+- 16 deterministic low-cost tree clusters
+- one `ForestZoneContext`
+
+The new logical zone is:
+
+| Zone ID | Type | Purpose |
+| --- | --- | --- |
+| `forest` | Forest | Context trigger for later Phase 2 survival mechanics |
+
+Tree canopies are visual-only; trunks use simple box colliders. Shared materials and primitive geometry keep the milestone mobile-conscious and deterministic.
+
+### Phase 2 architecture boundary
+
+Issue #35 adds **world context only**. It intentionally does not add:
+
+- stamina/resource drain
+- environmental survival risk
+- Reach + Survive mission logic
+- survival HUD
+- additional persistence state
+
+Those belong to Issues #36-#38. Later systems must subscribe to the `forest` zone context rather than add forest-specific behavior to `VehicleController` or `ZoneContext`.
 
 ## Validation
 
-Run:
+Phase 1 world validation:
 
 ```text
 Beyond The Beat > Phase 1 > Validate MVP World Foundation
 ```
 
-The validator checks that:
+Phase 2 forest validation:
 
-- the inherited drive/camera/mobile/parking loop is present
-- the Phase 1 world root exists
-- urban/off-road content is present
-- both zone contexts have the expected IDs/types/trigger sizes
-- the Phase 1 scene is enabled in Build Settings
+```text
+Beyond The Beat > Phase 2 > Validate Forest Biome Foundation
+```
 
-GitHub Actions also runs the dedicated `Phase 1 World Foundation Android` workflow and produces a development APK for this milestone. That artifact validates reproducible generation/build only; it is not the final Phase 1 exit artifact.
+The Phase 2 validator checks:
+
+- inherited Phase 1 world/mission/save/HUD/parking roots remain present
+- forest roots, ground, trail, connector, and deterministic trees exist
+- exactly one stable `forest` ZoneContext exists
+- it uses `WorldZoneType.Forest` with the expected trigger bounds
+- the generated Phase 2 scene is enabled in Build Settings
+
+The dedicated `Phase 2 Forest Foundation Android` workflow rebuilds and validates the Phase 1 prerequisite first, then generates/validates the forest scene and publishes a development APK with manifest/checksum traceability.
+
+## Validation debt note
+
+Phase 1 Issue #30 still requires physical Android exit evidence. Phase 2 development is proceeding only because the project owner explicitly instructed continuing. Repository/CI success must not be described as Phase 1 physical-device PASS.
