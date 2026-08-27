@@ -12,12 +12,16 @@ namespace BeyondTheBeat.UI
         [SerializeField] private Text titleText;
         [SerializeField] private Text objectiveText;
         [SerializeField] private Text statusText;
+        [SerializeField] private GameObject progressRoot;
+        [SerializeField] private Image progressFill;
 
         public MissionManager MissionManager => missionManager;
         public GameObject PanelRoot => panelRoot;
         public Text TitleText => titleText;
         public Text ObjectiveText => objectiveText;
         public Text StatusText => statusText;
+        public GameObject ProgressRoot => progressRoot;
+        public Image ProgressFill => progressFill;
 
         private void OnEnable()
         {
@@ -45,10 +49,10 @@ namespace BeyondTheBeat.UI
 
         public void Refresh()
         {
-            MissionHudSnapshot snapshot = CreateSnapshot(
-                missionManager != null ? missionManager.CurrentMission : null,
-                missionManager != null ? missionManager.State : MissionState.Inactive,
-                missionManager != null ? missionManager.Progress : default);
+            MissionDefinition mission = missionManager != null ? missionManager.CurrentMission : null;
+            MissionState state = missionManager != null ? missionManager.State : MissionState.Inactive;
+            MissionProgressSnapshot progress = missionManager != null ? missionManager.Progress : default;
+            MissionHudSnapshot snapshot = CreateSnapshot(mission, state, progress);
 
             if (panelRoot != null)
             {
@@ -68,6 +72,21 @@ namespace BeyondTheBeat.UI
             if (statusText != null)
             {
                 statusText.text = snapshot.Status;
+            }
+
+            bool showProgress = mission != null &&
+                                state == MissionState.Active &&
+                                mission.ObjectiveType == MissionObjectiveType.ReachAndSurvive &&
+                                progress.TargetContextActive;
+
+            if (progressRoot != null)
+            {
+                progressRoot.SetActive(showProgress);
+            }
+
+            if (progressFill != null)
+            {
+                progressFill.fillAmount = showProgress ? progress.NormalizedProgress : 0f;
             }
         }
 
@@ -92,7 +111,7 @@ namespace BeyondTheBeat.UI
             {
                 return new MissionHudSnapshot(
                     "FREE ROAM",
-                    "Explore the world, drive, park, or resume a mission.",
+                    "Explore, drive and discover the world.",
                     "NO ACTIVE MISSION");
             }
 
@@ -114,19 +133,19 @@ namespace BeyondTheBeat.UI
                 case MissionState.Completed:
                     return new MissionHudSnapshot(
                         "MISSION COMPLETE",
-                        mission.DisplayName + "\nContinue driving and exploring in free roam.",
-                        "COMPLETE • FREE ROAM AVAILABLE");
+                        mission.DisplayName + "\nFree roam is available.",
+                        "COMPLETE • KEEP EXPLORING");
 
                 case MissionState.Failed:
                     return new MissionHudSnapshot(
                         "MISSION FAILED",
                         mission.DisplayName + "\nFree roam remains available.",
-                        "FAILED • FREE ROAM AVAILABLE");
+                        "FAILED • FREE ROAM");
 
                 default:
                     return new MissionHudSnapshot(
                         "FREE ROAM",
-                        "Explore the world, drive, park, or resume a mission.",
+                        "Explore, drive and discover the world.",
                         "NO ACTIVE MISSION");
             }
         }
@@ -139,9 +158,7 @@ namespace BeyondTheBeat.UI
             {
                 return new MissionHudSnapshot(
                     mission.DisplayName,
-                    string.IsNullOrWhiteSpace(mission.Description)
-                        ? "Reach the target survival zone."
-                        : mission.Description,
+                    "Reach the forest survival zone.",
                     "REACH TARGET ZONE");
             }
 
@@ -151,7 +168,7 @@ namespace BeyondTheBeat.UI
 
             return new MissionHudSnapshot(
                 mission.DisplayName,
-                $"Survive the environmental pressure: {elapsed}/{required}s",
+                $"Hold out in the forest • {elapsed}/{required}s",
                 $"SURVIVING • {percent}%");
         }
 
