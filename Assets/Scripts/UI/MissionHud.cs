@@ -71,7 +71,7 @@ namespace BeyondTheBeat.UI
 
             if (statusText != null)
             {
-                statusText.text = snapshot.Status;
+                statusText.text = AppendSurvivalResourceStatus(snapshot.Status, mission, state);
             }
 
             bool showProgress = mission != null &&
@@ -148,6 +148,23 @@ namespace BeyondTheBeat.UI
                         "Explore, drive and discover the world.",
                         "NO ACTIVE MISSION");
             }
+        }
+
+        private string AppendSurvivalResourceStatus(string baseStatus, MissionDefinition mission, MissionState state)
+        {
+            if (mission == null ||
+                state != MissionState.Active ||
+                mission.ObjectiveType != MissionObjectiveType.ReachAndSurvive ||
+                missionManager == null ||
+                missionManager.SurvivalController == null ||
+                missionManager.SurvivalController.Resource == null)
+            {
+                return baseStatus;
+            }
+
+            int resourcePercent = Mathf.RoundToInt(
+                missionManager.SurvivalController.Resource.NormalizedValue * 100f);
+            return $"{baseStatus} • RESOURCE {resourcePercent}%";
         }
 
         private static MissionHudSnapshot CreateReachAndSurviveSnapshot(
