@@ -1,4 +1,5 @@
 using BeyondTheBeat.Missions;
+using BeyondTheBeat.Survival;
 using UnityEngine;
 
 namespace BeyondTheBeat.Persistence
@@ -10,6 +11,7 @@ namespace BeyondTheBeat.Persistence
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private MissionManager missionManager;
         [SerializeField] private Transform vehicleTransform;
+        [SerializeField] private ForestSurvivalController survivalController;
         [SerializeField] private bool loadOnStart = true;
         [SerializeField] private bool saveOnApplicationPause = true;
         [SerializeField] private bool saveOnApplicationQuit = true;
@@ -22,6 +24,7 @@ namespace BeyondTheBeat.Persistence
         public SaveManager SaveManager => saveManager;
         public MissionManager MissionManager => missionManager;
         public Transform VehicleTransform => vehicleTransform;
+        public ForestSurvivalController SurvivalController => survivalController;
         public bool LoadOnStart => loadOnStart;
         public bool SaveOnApplicationPause => saveOnApplicationPause;
         public bool SaveOnApplicationQuit => saveOnApplicationQuit;
@@ -121,13 +124,22 @@ namespace BeyondTheBeat.Persistence
 
         private GameSaveData CaptureCurrentState()
         {
+            bool hasSurvivalState = survivalController != null && survivalController.Resource != null;
+            MissionProgressSnapshot missionProgress = missionManager.Progress;
+
             return new GameSaveData
             {
                 Version = SaveManager.CurrentVersion,
                 SceneId = gameObject.scene.name,
                 VehicleTransform = SavedTransform.Capture(vehicleTransform),
                 MissionId = missionManager.CurrentMissionId,
-                MissionState = missionManager.State
+                MissionState = missionManager.State,
+                HasPhase2SurvivalState = hasSurvivalState,
+                MissionTargetContextActive = hasSurvivalState && missionProgress.TargetContextActive,
+                MissionSurvivalElapsedSeconds = hasSurvivalState ? missionProgress.SurvivalElapsedSeconds : 0f,
+                SurvivalResourceValue = hasSurvivalState ? survivalController.Resource.CurrentValue : 0f,
+                SurvivalPressureActive = hasSurvivalState && survivalController.IsPressureActive,
+                SurvivalRecovering = hasSurvivalState && survivalController.IsRecovering
             };
         }
 
@@ -145,12 +157,41 @@ namespace BeyondTheBeat.Persistence
                 return false;
             }
 
+            ApplyVehicleTransform(data.VehicleTransform);
+
             if (!missionManager.RestoreMissionState(data.MissionId, data.MissionState))
             {
                 return false;
             }
 
-            ApplyVehicleTransform(data.VehicleTransform);
+            if (!data.HasPhase2SurvivalState)
+            {
+                return true;
+            }
+
+            if (survivalController == null || survivalController.Resource == null)
+            {
+                Debug.LogWarning("[Beyond The Beat] Phase 2 save contains survival state but no survival controller is configured.");
+                return false;
+            }
+
+            if (!survivalController.RestorePersistentState(
+                    data.SurvivalResourceValue,
+                    data.SurvivalPressureActive,
+                    data.SurvivalRecovering))
+            {
+                return false;
+            }
+
+            if (data.MissionState == MissionState.Active &&
+                missionManager.CurrentMission != null &&
+                missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
+            {
+                return missionManager.RestoreObjectiveProgress(
+                    data.MissionTargetContextActive,
+                    data.MissionSurvivalElapsedSeconds);
+            }
+
             return true;
         }
 
@@ -160,6 +201,8 @@ namespace BeyondTheBeat.Persistence
             {
                 ApplyVehicleTransform(newGameVehicleTransform);
             }
+
+            survivalController?.ResetResource();
 
             if (missionManager == null)
             {
