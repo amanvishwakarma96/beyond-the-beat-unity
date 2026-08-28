@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.Build.Profile;
 using UnityEngine;
 
 namespace BeyondTheBeat.Editor
@@ -10,11 +9,16 @@ namespace BeyondTheBeat.Editor
     /// Clean CI checkouts in this repository do not currently carry the full PlayerSettings asset.
     /// Enforce the runtime input backend explicitly before building so Android touch cannot silently
     /// fall back to an unexpected default.
+    ///
+    /// BuildProfile is intentionally resolved through reflection. Its editor API surface differs
+    /// between Unity 6 revisions, and a compile-time dependency here can prevent the entire project
+    /// from compiling before the Android build even starts.
     /// </summary>
     internal static class InputBackendBuildGuard
     {
         private const string ActiveInputHandlerProperty = "activeInputHandler";
         private const string NativeBackendsProperty = "enableNativePlatformBackendsForNewInputSystem";
+        private const string BuildProfileTypeName = "UnityEditor.Build.Profile.BuildProfile";
         private const int BothInputBackends = 2;
 
         public static void EnsureBothInputBackends()
@@ -61,8 +65,24 @@ namespace BeyondTheBeat.Editor
 
         private static PlayerSettings ResolvePlayerSettings()
         {
-#if UNITY_6000_0_OR_NEWER
-            Type buildProfileType = typeof(BuildProfile);
+            PlayerSettings playerSettings = ResolvePlayerSettingsFromBuildProfile();
+            if (playerSettings != null)
+            {
+                return playerSettings;
+            }
+
+            PlayerSettings[] candidates = Resources.FindObjectsOfTypeAll<PlayerSettings>();
+            return candidates != null && candidates.Length > 0 ? candidates[0] : null;
+        }
+
+        private static PlayerSettings ResolvePlayerSettingsFromBuildProfile()
+        {
+            Type buildProfileType = FindType(BuildProfileTypeName);
+            if (buildProfileType == null)
+            {
+                return null;
+            }
+
             FieldInfo globalPlayerSettingsField = buildProfileType.GetField(
                 "s_GlobalPlayerSettings",
                 BindingFlags.Static | BindingFlags.NonPublic);
@@ -71,12 +91,23 @@ namespace BeyondTheBeat.Editor
                 ? globalPlayerSettingsField.GetValue(null) as PlayerSettings
                 : null;
 
-            BuildProfile activeBuildProfile = BuildProfile.GetActiveBuildProfile();
+            MethodInfo getActiveBuildProfile = buildProfileType.GetMethod(
+                "GetActiveBuildProfile",
+                BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic,
+                null,
+                Type.EmptyTypes,
+                null);
+
+            object activeBuildProfile = getActiveBuildProfile != null
+                ? getActiveBuildProfile.Invoke(null, null)
+                : null;
+
             if (activeBuildProfile != null)
             {
                 FieldInfo overrideField = buildProfileType.GetField(
                     "m_PlayerSettings",
                     BindingFlags.Instance | BindingFlags.NonPublic);
+
                 PlayerSettings profileOverride = overrideField != null
                     ? overrideField.GetValue(activeBuildProfile) as PlayerSettings
                     : null;
@@ -88,10 +119,21 @@ namespace BeyondTheBeat.Editor
             }
 
             return playerSettings;
-#else
-            PlayerSettings[] candidates = Resources.FindObjectsOfTypeAll<PlayerSettings>();
-            return candidates != null && candidates.Length > 0 ? candidates[0] : null;
-#endif
+        }
+
+        private static Type FindType(string fullName)
+        {
+            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+            for (int i = 0; i < assemblies.Length; i++)
+            {
+                Type type = assemblies[i].GetType(fullName, false);
+                if (type != null)
+                {
+                    return type;
+                }
+            }
+
+            return null;
         }
     }
 }
