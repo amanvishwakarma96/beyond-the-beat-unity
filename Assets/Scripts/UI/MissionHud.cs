@@ -71,7 +71,7 @@ namespace BeyondTheBeat.UI
 
             if (statusText != null)
             {
-                statusText.text = snapshot.Status;
+                statusText.text = AppendSurvivalResourceStatus(snapshot.Status, mission, state);
             }
 
             bool showProgress = mission != null &&
@@ -150,6 +150,23 @@ namespace BeyondTheBeat.UI
             }
         }
 
+        private string AppendSurvivalResourceStatus(string baseStatus, MissionDefinition mission, MissionState state)
+        {
+            if (mission == null ||
+                state != MissionState.Active ||
+                mission.ObjectiveType != MissionObjectiveType.ReachAndSurvive ||
+                missionManager == null ||
+                missionManager.SurvivalController == null ||
+                missionManager.SurvivalController.Resource == null)
+            {
+                return baseStatus;
+            }
+
+            int resourcePercent = Mathf.RoundToInt(
+                missionManager.SurvivalController.Resource.NormalizedValue * 100f);
+            return $"{baseStatus} • RESOURCE {resourcePercent}%";
+        }
+
         private static MissionHudSnapshot CreateReachAndSurviveSnapshot(
             MissionDefinition mission,
             MissionProgressSnapshot progress)
@@ -183,14 +200,27 @@ namespace BeyondTheBeat.UI
             missionManager.MissionStateChanged += HandleMissionStateChanged;
             missionManager.MissionProgressChanged -= HandleMissionProgressChanged;
             missionManager.MissionProgressChanged += HandleMissionProgressChanged;
+
+            if (missionManager.SurvivalController != null && missionManager.SurvivalController.Resource != null)
+            {
+                missionManager.SurvivalController.Resource.ValueChanged -= HandleSurvivalValueChanged;
+                missionManager.SurvivalController.Resource.ValueChanged += HandleSurvivalValueChanged;
+            }
         }
 
         private void Unsubscribe()
         {
-            if (missionManager != null)
+            if (missionManager == null)
             {
-                missionManager.MissionStateChanged -= HandleMissionStateChanged;
-                missionManager.MissionProgressChanged -= HandleMissionProgressChanged;
+                return;
+            }
+
+            missionManager.MissionStateChanged -= HandleMissionStateChanged;
+            missionManager.MissionProgressChanged -= HandleMissionProgressChanged;
+
+            if (missionManager.SurvivalController != null && missionManager.SurvivalController.Resource != null)
+            {
+                missionManager.SurvivalController.Resource.ValueChanged -= HandleSurvivalValueChanged;
             }
         }
 
@@ -200,6 +230,11 @@ namespace BeyondTheBeat.UI
         }
 
         private void HandleMissionProgressChanged(MissionProgressSnapshot progress)
+        {
+            Refresh();
+        }
+
+        private void HandleSurvivalValueChanged(float currentValue, float maxValue)
         {
             Refresh();
         }

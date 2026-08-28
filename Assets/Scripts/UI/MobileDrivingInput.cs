@@ -253,7 +253,7 @@ namespace BeyondTheBeat.UI
                     for (int i = 0; i < touchCount; i++)
                     {
                         Touch touch = UnityEngine.Input.GetTouch(i);
-                        if (touch.phase == TouchPhase.Ended || touch.phase == TouchPhase.Canceled)
+                        if (touch.phase == UnityEngine.TouchPhase.Ended || touch.phase == UnityEngine.TouchPhase.Canceled)
                         {
                             continue;
                         }

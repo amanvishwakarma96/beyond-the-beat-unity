@@ -126,6 +126,23 @@ namespace BeyondTheBeat.Survival
             resource?.ResetToStartingValue();
         }
 
+        public bool RestorePersistentState(float resourceValue, bool restoredPressureActive, bool restoredRecovering)
+        {
+            if (resource == null)
+            {
+                return false;
+            }
+
+            resource.SetValue(resourceValue);
+            recovering =
+                !restoredPressureActive &&
+                restoredRecovering &&
+                exitMode == SurvivalExitMode.RecoverOverTime &&
+                resource.CurrentValue < resource.MaxValue;
+            SetPressureActive(restoredPressureActive);
+            return true;
+        }
+
         private void HandleActorEntered(ZoneContext zone, GameObject actor)
         {
             TryEnterContext(zone, actor);

@@ -169,6 +169,23 @@ namespace BeyondTheBeat.Missions
             return true;
         }
 
+        public bool RestoreObjectiveProgress(bool restoredTargetContextActive, float restoredSurvivalElapsedSeconds)
+        {
+            if (!HasActiveMission || currentMission.ObjectiveType != MissionObjectiveType.ReachAndSurvive)
+            {
+                return false;
+            }
+
+            targetContextActive = restoredTargetContextActive;
+            survivalElapsedSeconds = Mathf.Clamp(
+                restoredSurvivalElapsedSeconds,
+                0f,
+                currentMission.SurvivalDurationSeconds);
+            lastPublishedSurvivalElapsed = -1f;
+            PublishProgress(true);
+            return true;
+        }
+
         public bool FailActiveMission()
         {
             if (!HasActiveMission)
