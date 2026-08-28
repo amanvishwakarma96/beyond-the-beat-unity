@@ -68,5 +68,14 @@ namespace BeyondTheBeat.Persistence
         public SavedTransform VehicleTransform = new SavedTransform(Vector3.zero, Quaternion.identity);
         public string MissionId = string.Empty;
         public MissionState MissionState = MissionState.Inactive;
+
+        // Additive Phase 2 fields. Older Phase 1 saves deserialize with HasPhase2SurvivalState=false
+        // and therefore keep the established safe fallback behavior without a save-version break.
+        public bool HasPhase2SurvivalState;
+        public bool MissionTargetContextActive;
+        public float MissionSurvivalElapsedSeconds;
+        public float SurvivalResourceValue;
+        public bool SurvivalPressureActive;
+        public bool SurvivalRecovering;
     }
 }
