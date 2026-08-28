@@ -188,7 +188,7 @@ namespace BeyondTheBeat.Editor
                         hudPass =
                             hud.MissionManager == missionManager &&
                             hud.StatusText != null &&
-                            hud.StatusText.text.Contains("RESOURCE 64%", StringComparison.Ordinal);
+                            hud.StatusText.text.IndexOf("RESOURCE 64%", StringComparison.Ordinal) >= 0;
                     }
 
                     missionManager.ClearMission();
