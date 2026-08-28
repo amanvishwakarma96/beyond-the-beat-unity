@@ -27,6 +27,7 @@ namespace BeyondTheBeat.UI
         private readonly List<Vector2> activeScreenTouches = new List<Vector2>(10);
         private bool previousInteractPressed;
         private bool interactionRequested;
+        private GUIStyle diagnosticStyle;
 
         public float Steering { get; private set; }
         public float Throttle { get; private set; }
@@ -40,9 +41,10 @@ namespace BeyondTheBeat.UI
         public bool NewTouchscreenAvailable => Touchscreen.current != null;
 
         public string DiagnosticSummary =>
-            $"INPUT NEW:{(NewTouchscreenAvailable ? "ON" : "OFF")}({LastNewInputTouchCount}) " +
-            $"LEG:{LastLegacyTouchCount} VEH:{(VehicleBound ? "OK" : "MISS")} " +
-            $"S:{Steering:0.0} T:{Throttle:0.0} B:{Brake:0.0} A:{(previousInteractPressed ? 1 : 0)}";
+            $"TOUCH NEW:{(NewTouchscreenAvailable ? "ON" : "OFF")}({LastNewInputTouchCount}) " +
+            $"LEG:{LastLegacyTouchCount} ALL:{LastCombinedTouchCount} VEH:{(VehicleBound ? "OK" : "MISS")} " +
+            $"S:{Steering:0.0} T:{Throttle:0.0} B:{Brake:0.0} A:{(previousInteractPressed ? 1 : 0)} " +
+            $"SPD:{(vehicleController != null ? vehicleController.CurrentSpeedKph : 0f):0}kph";
 
         public event Action InteractionPressed;
 
@@ -56,6 +58,34 @@ namespace BeyondTheBeat.UI
             }
 
             ApplyResolvedInput(steering, throttle, brake, interactPressed);
+        }
+
+        private void OnGUI()
+        {
+            if (!Debug.isDebugBuild)
+            {
+                return;
+            }
+
+            if (diagnosticStyle == null)
+            {
+                diagnosticStyle = new GUIStyle(GUI.skin.label)
+                {
+                    alignment = TextAnchor.MiddleCenter,
+                    fontSize = Mathf.Max(18, Mathf.RoundToInt(Screen.height * 0.026f)),
+                    fontStyle = FontStyle.Bold
+                };
+                diagnosticStyle.normal.textColor = Color.white;
+            }
+
+            float width = Mathf.Min(Screen.width - 24f, 1220f);
+            Rect background = new Rect((Screen.width - width) * 0.5f, 10f, width, 48f);
+            Color previous = GUI.color;
+            GUI.color = new Color(0.01f, 0.02f, 0.03f, 0.82f);
+            GUI.Box(background, GUIContent.none);
+            GUI.color = Color.white;
+            GUI.Label(background, DiagnosticSummary, diagnosticStyle);
+            GUI.color = previous;
         }
 
         private void OnDisable()
@@ -234,8 +264,6 @@ namespace BeyondTheBeat.UI
                 }
                 catch (InvalidOperationException)
                 {
-                    // The legacy API throws when the player was built with only the new Input System.
-                    // The CI build guard forces Both, but keeping this safe makes the runtime resilient.
                     LastLegacyTouchCount = 0;
                 }
             }
