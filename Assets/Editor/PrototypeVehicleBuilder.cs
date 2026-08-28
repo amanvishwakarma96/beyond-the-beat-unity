@@ -14,13 +14,18 @@ namespace BeyondTheBeat.Editor
         private const string PrefabPath = "Assets/Prefabs/Vehicles/PrototypeVehicle.prefab";
         private const string VehicleMaterialPath = "Assets/Materials/Prototype_Vehicle.mat";
         private const string WheelMaterialPath = "Assets/Materials/Prototype_Wheel.mat";
+        private const string GlassMaterialPath = "Assets/Materials/Prototype_VehicleGlass.mat";
+        private const string TrimMaterialPath = "Assets/Materials/Prototype_VehicleTrim.mat";
+        private const string RimMaterialPath = "Assets/Materials/Prototype_VehicleRim.mat";
+        private const string HeadlightMaterialPath = "Assets/Materials/Prototype_Headlight.mat";
+        private const string TailLightMaterialPath = "Assets/Materials/Prototype_TailLight.mat";
         private const string VehicleName = "PrototypeVehicle";
         private const string SpawnMarkerName = "VehicleSpawnMarker";
 
         [MenuItem("Beyond The Beat/Phase 0/Build Prototype Vehicle")]
         private static void BuildPrototypeVehicle()
         {
-            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
             {
                 return;
             }
@@ -48,8 +53,13 @@ namespace BeyondTheBeat.Editor
                 UnityEngine.Object.DestroyImmediate(existingVehicle);
             }
 
-            Material bodyMaterial = GetOrCreateMaterial(VehicleMaterialPath, new Color(0.08f, 0.24f, 0.58f));
-            Material wheelMaterial = GetOrCreateMaterial(WheelMaterialPath, new Color(0.06f, 0.06f, 0.07f));
+            Material bodyMaterial = GetOrCreateMaterial(VehicleMaterialPath, new Color(0.035f, 0.31f, 0.48f), 0.42f, 0.08f);
+            Material wheelMaterial = GetOrCreateMaterial(WheelMaterialPath, new Color(0.025f, 0.028f, 0.034f), 0.14f, 0f);
+            Material glassMaterial = GetOrCreateMaterial(GlassMaterialPath, new Color(0.025f, 0.09f, 0.13f), 0.72f, 0.02f);
+            Material trimMaterial = GetOrCreateMaterial(TrimMaterialPath, new Color(0.028f, 0.035f, 0.045f), 0.32f, 0.12f);
+            Material rimMaterial = GetOrCreateMaterial(RimMaterialPath, new Color(0.48f, 0.55f, 0.62f), 0.62f, 0.52f);
+            Material headlightMaterial = GetOrCreateMaterial(HeadlightMaterialPath, new Color(0.86f, 0.94f, 1f), 0.78f, 0.08f);
+            Material tailLightMaterial = GetOrCreateMaterial(TailLightMaterialPath, new Color(0.88f, 0.06f, 0.045f), 0.50f, 0.04f);
 
             GameObject vehicle = new GameObject(VehicleName);
             vehicle.transform.position = spawnMarker.position + new Vector3(0f, 0.35f, 0f);
@@ -62,12 +72,18 @@ namespace BeyondTheBeat.Editor
             chassisCollider.center = new Vector3(0f, 0.45f, 0f);
             chassisCollider.size = new Vector3(1.8f, 0.65f, 3.6f);
 
-            CreateBodyVisual(vehicle.transform, bodyMaterial);
+            CreateBodyVisual(
+                vehicle.transform,
+                bodyMaterial,
+                glassMaterial,
+                trimMaterial,
+                headlightMaterial,
+                tailLightMaterial);
 
-            WheelAssembly frontLeft = CreateWheel(vehicle.transform, "FrontLeft", new Vector3(-0.82f, 0f, 1.2f), wheelMaterial);
-            WheelAssembly frontRight = CreateWheel(vehicle.transform, "FrontRight", new Vector3(0.82f, 0f, 1.2f), wheelMaterial);
-            WheelAssembly rearLeft = CreateWheel(vehicle.transform, "RearLeft", new Vector3(-0.82f, 0f, -1.2f), wheelMaterial);
-            WheelAssembly rearRight = CreateWheel(vehicle.transform, "RearRight", new Vector3(0.82f, 0f, -1.2f), wheelMaterial);
+            WheelAssembly frontLeft = CreateWheel(vehicle.transform, "FrontLeft", new Vector3(-0.82f, 0f, 1.2f), wheelMaterial, rimMaterial);
+            WheelAssembly frontRight = CreateWheel(vehicle.transform, "FrontRight", new Vector3(0.82f, 0f, 1.2f), wheelMaterial, rimMaterial);
+            WheelAssembly rearLeft = CreateWheel(vehicle.transform, "RearLeft", new Vector3(-0.82f, 0f, -1.2f), wheelMaterial, rimMaterial);
+            WheelAssembly rearRight = CreateWheel(vehicle.transform, "RearRight", new Vector3(0.82f, 0f, -1.2f), wheelMaterial, rimMaterial);
 
             VehicleController controller = vehicle.AddComponent<VehicleController>();
             vehicle.AddComponent<VehicleDebugInput>();
@@ -97,8 +113,8 @@ namespace BeyondTheBeat.Editor
             SceneView.lastActiveSceneView?.FrameSelected();
 
             Debug.Log(
-                "[Beyond The Beat] Prototype vehicle created with the Phase 0 candidate final tuning baseline. " +
-                "Play controls: W/S or Up/Down = throttle/reverse, A/D or Left/Right = steer, Space = brake.");
+                "[Beyond The Beat] Prototype vehicle created with unchanged physics and an authored low-poly visual shell. " +
+                "Body, cabin, glass, lights, bumpers, and wheel rims are presentation-only children without colliders.");
         }
 
         [MenuItem("Beyond The Beat/Phase 0/Validate Prototype Vehicle")]
@@ -131,6 +147,16 @@ namespace BeyondTheBeat.Editor
                 bool referencesPass = controllerPass && controller != null && ValidateControllerReferences(controller);
                 bool tuningPass = controllerPass && controller != null && ValidateCandidateTuning(controller);
 
+                Transform bodyVisual = vehiclePass ? vehicle.transform.Find("BodyVisual") : null;
+                int rimCount = vehiclePass
+                    ? vehicle.GetComponentsInChildren<Transform>(true).Count(transform => transform.name == "Rim")
+                    : 0;
+                bool authoredVisualPass =
+                    bodyVisual != null &&
+                    bodyVisual.childCount >= 12 &&
+                    rimCount == 4 &&
+                    bodyVisual.GetComponentsInChildren<Collider>(true).Length == 0;
+
                 bool allPass =
                     vehiclePass &&
                     rigidbodyPass &&
@@ -139,7 +165,8 @@ namespace BeyondTheBeat.Editor
                     wheelCountPass &&
                     prefabPass &&
                     referencesPass &&
-                    tuningPass;
+                    tuningPass &&
+                    authoredVisualPass;
 
                 string message =
                     "[Beyond The Beat] Phase 0 vehicle validation\n" +
@@ -150,6 +177,7 @@ namespace BeyondTheBeat.Editor
                     $"Four WheelColliders: {PassFail(wheelCountPass)}\n" +
                     $"Controller wheel references: {PassFail(referencesPass)}\n" +
                     $"Candidate final tuning baseline: {PassFail(tuningPass)}\n" +
+                    $"Authored body/glass/lights/rims visual shell: {PassFail(authoredVisualPass)}\n" +
                     $"Prototype vehicle prefab: {PassFail(prefabPass)}";
 
                 if (allPass)
@@ -170,18 +198,45 @@ namespace BeyondTheBeat.Editor
             }
         }
 
-        private static void CreateBodyVisual(Transform parent, Material material)
+        private static void CreateBodyVisual(
+            Transform parent,
+            Material bodyMaterial,
+            Material glassMaterial,
+            Material trimMaterial,
+            Material headlightMaterial,
+            Material tailLightMaterial)
         {
-            GameObject bodyVisual = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            bodyVisual.name = "BodyVisual";
-            bodyVisual.transform.SetParent(parent, false);
-            bodyVisual.transform.localPosition = new Vector3(0f, 0.45f, 0f);
-            bodyVisual.transform.localScale = new Vector3(1.75f, 0.6f, 3.5f);
-            AssignMaterial(bodyVisual, material);
-            RemoveCollider(bodyVisual);
+            GameObject visualRoot = new GameObject("BodyVisual");
+            visualRoot.transform.SetParent(parent, false);
+
+            CreateVisualBox("LowerBody", visualRoot.transform, new Vector3(0f, 0.44f, 0f), new Vector3(1.78f, 0.48f, 3.52f), Quaternion.identity, bodyMaterial);
+            CreateVisualBox("Hood", visualRoot.transform, new Vector3(0f, 0.76f, 1.03f), new Vector3(1.64f, 0.24f, 1.16f), Quaternion.Euler(-4f, 0f, 0f), bodyMaterial);
+            CreateVisualBox("RearDeck", visualRoot.transform, new Vector3(0f, 0.75f, -1.28f), new Vector3(1.62f, 0.22f, 0.72f), Quaternion.Euler(3f, 0f, 0f), bodyMaterial);
+            CreateVisualBox("Cabin", visualRoot.transform, new Vector3(0f, 1.05f, -0.18f), new Vector3(1.48f, 0.60f, 1.48f), Quaternion.identity, bodyMaterial);
+            CreateVisualBox("Roof", visualRoot.transform, new Vector3(0f, 1.39f, -0.22f), new Vector3(1.28f, 0.11f, 1.08f), Quaternion.identity, trimMaterial);
+
+            CreateVisualBox("Windshield", visualRoot.transform, new Vector3(0f, 1.08f, 0.58f), new Vector3(1.36f, 0.48f, 0.055f), Quaternion.Euler(-24f, 0f, 0f), glassMaterial);
+            CreateVisualBox("RearGlass", visualRoot.transform, new Vector3(0f, 1.08f, -0.93f), new Vector3(1.34f, 0.42f, 0.055f), Quaternion.Euler(24f, 0f, 0f), glassMaterial);
+            CreateVisualBox("SideGlass_L", visualRoot.transform, new Vector3(-0.755f, 1.08f, -0.18f), new Vector3(0.045f, 0.44f, 0.92f), Quaternion.identity, glassMaterial);
+            CreateVisualBox("SideGlass_R", visualRoot.transform, new Vector3(0.755f, 1.08f, -0.18f), new Vector3(0.045f, 0.44f, 0.92f), Quaternion.identity, glassMaterial);
+
+            CreateVisualBox("FrontBumper", visualRoot.transform, new Vector3(0f, 0.42f, 1.80f), new Vector3(1.72f, 0.18f, 0.12f), Quaternion.identity, trimMaterial);
+            CreateVisualBox("RearBumper", visualRoot.transform, new Vector3(0f, 0.42f, -1.80f), new Vector3(1.72f, 0.18f, 0.12f), Quaternion.identity, trimMaterial);
+            CreateVisualBox("SideSkirt_L", visualRoot.transform, new Vector3(-0.86f, 0.34f, -0.05f), new Vector3(0.10f, 0.16f, 2.45f), Quaternion.identity, trimMaterial);
+            CreateVisualBox("SideSkirt_R", visualRoot.transform, new Vector3(0.86f, 0.34f, -0.05f), new Vector3(0.10f, 0.16f, 2.45f), Quaternion.identity, trimMaterial);
+
+            CreateVisualBox("Headlight_L", visualRoot.transform, new Vector3(-0.57f, 0.64f, 1.79f), new Vector3(0.43f, 0.18f, 0.07f), Quaternion.identity, headlightMaterial);
+            CreateVisualBox("Headlight_R", visualRoot.transform, new Vector3(0.57f, 0.64f, 1.79f), new Vector3(0.43f, 0.18f, 0.07f), Quaternion.identity, headlightMaterial);
+            CreateVisualBox("TailLight_L", visualRoot.transform, new Vector3(-0.58f, 0.63f, -1.79f), new Vector3(0.38f, 0.16f, 0.07f), Quaternion.identity, tailLightMaterial);
+            CreateVisualBox("TailLight_R", visualRoot.transform, new Vector3(0.58f, 0.63f, -1.79f), new Vector3(0.38f, 0.16f, 0.07f), Quaternion.identity, tailLightMaterial);
         }
 
-        private static WheelAssembly CreateWheel(Transform parent, string name, Vector3 localPosition, Material material)
+        private static WheelAssembly CreateWheel(
+            Transform parent,
+            string name,
+            Vector3 localPosition,
+            Material wheelMaterial,
+            Material rimMaterial)
         {
             GameObject colliderObject = new GameObject(name + "WheelCollider");
             colliderObject.transform.SetParent(parent, false);
@@ -197,14 +252,41 @@ namespace BeyondTheBeat.Editor
             visualRoot.transform.localPosition = localPosition;
 
             GameObject visualMesh = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-            visualMesh.name = "Mesh";
+            visualMesh.name = "Tire";
             visualMesh.transform.SetParent(visualRoot.transform, false);
             visualMesh.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
             visualMesh.transform.localScale = new Vector3(0.34f, 0.12f, 0.34f);
-            AssignMaterial(visualMesh, material);
+            AssignMaterial(visualMesh, wheelMaterial);
             RemoveCollider(visualMesh);
 
+            GameObject rim = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+            rim.name = "Rim";
+            rim.transform.SetParent(visualRoot.transform, false);
+            rim.transform.localRotation = Quaternion.Euler(0f, 0f, 90f);
+            rim.transform.localScale = new Vector3(0.205f, 0.128f, 0.205f);
+            AssignMaterial(rim, rimMaterial);
+            RemoveCollider(rim);
+
             return new WheelAssembly(wheelCollider, visualRoot.transform);
+        }
+
+        private static GameObject CreateVisualBox(
+            string name,
+            Transform parent,
+            Vector3 localPosition,
+            Vector3 localScale,
+            Quaternion localRotation,
+            Material material)
+        {
+            GameObject item = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            item.name = name;
+            item.transform.SetParent(parent, false);
+            item.transform.localPosition = localPosition;
+            item.transform.localScale = localScale;
+            item.transform.localRotation = localRotation;
+            AssignMaterial(item, material);
+            RemoveCollider(item);
+            return item;
         }
 
         private static bool ValidateControllerReferences(VehicleController controller)
@@ -286,28 +368,51 @@ namespace BeyondTheBeat.Editor
             return null;
         }
 
-        private static Material GetOrCreateMaterial(string path, Color color)
+        private static Material GetOrCreateMaterial(
+            string path,
+            Color color,
+            float smoothness,
+            float metallic)
         {
-            Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (existing != null)
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
             {
-                return existing;
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
+                if (shader == null)
+                {
+                    throw new InvalidOperationException("No compatible Lit shader was found for the prototype vehicle.");
+                }
+
+                material = new Material(shader)
+                {
+                    name = System.IO.Path.GetFileNameWithoutExtension(path)
+                };
+                AssetDatabase.CreateAsset(material, path);
             }
 
-            Shader shader = Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard");
-            if (shader == null)
-            {
-                throw new InvalidOperationException("No compatible Lit shader was found for the prototype vehicle.");
-            }
-
-            Material material = new Material(shader)
-            {
-                name = System.IO.Path.GetFileNameWithoutExtension(path),
-                color = color
-            };
-
-            AssetDatabase.CreateAsset(material, path);
+            material.color = color;
+            SetColorIfPresent(material, "_BaseColor", color);
+            SetFloatIfPresent(material, "_Smoothness", smoothness);
+            SetFloatIfPresent(material, "_Glossiness", smoothness);
+            SetFloatIfPresent(material, "_Metallic", metallic);
+            EditorUtility.SetDirty(material);
             return material;
+        }
+
+        private static void SetColorIfPresent(Material material, string propertyName, Color value)
+        {
+            if (material.HasProperty(propertyName))
+            {
+                material.SetColor(propertyName, value);
+            }
+        }
+
+        private static void SetFloatIfPresent(Material material, string propertyName, float value)
+        {
+            if (material.HasProperty(propertyName))
+            {
+                material.SetFloat(propertyName, value);
+            }
         }
 
         private static void AssignMaterial(GameObject gameObject, Material material)

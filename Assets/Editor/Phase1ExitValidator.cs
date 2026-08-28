@@ -71,7 +71,29 @@ namespace BeyondTheBeat.Editor
                     canvas.renderMode == RenderMode.ScreenSpaceOverlay &&
                     canvasObject.TryGetComponent<GraphicRaycaster>(out _) &&
                     mobileInput != null &&
+                    mobileInput.DirectTouchFallbackEnabled &&
                     canvasObject.GetComponentsInChildren<TouchHoldButton>(true).Length == 5;
+
+                bool mobileMappingPass = false;
+                if (mobileInput != null)
+                {
+                    mobileInput.EvaluateButtonStatesForValidation(
+                        leftPressed: true,
+                        rightPressed: false,
+                        acceleratePressed: true,
+                        brakeReversePressed: false,
+                        interact: true,
+                        out float steering,
+                        out float throttle,
+                        out float brake,
+                        out bool interact);
+
+                    mobileMappingPass =
+                        Mathf.Approximately(steering, -1f) &&
+                        Mathf.Approximately(throttle, 1f) &&
+                        Mathf.Approximately(brake, 0f) &&
+                        interact;
+                }
 
                 bool parkingPass =
                     interactionController != null &&
@@ -96,7 +118,9 @@ namespace BeyondTheBeat.Editor
                     missionHud.PanelRoot != null &&
                     missionHud.TitleText != null &&
                     missionHud.ObjectiveText != null &&
-                    missionHud.StatusText != null;
+                    missionHud.StatusText != null &&
+                    missionHud.ProgressRoot != null &&
+                    missionHud.ProgressFill != null;
 
                 MissionDefinition mission = missionManager != null ? missionManager.StartingMission : null;
                 ZoneContext targetZone = mission != null
@@ -137,7 +161,7 @@ namespace BeyondTheBeat.Editor
                         activeView.Title == mission.DisplayName &&
                         activeView.Status == "MISSION ACTIVE" &&
                         completedView.Title == "MISSION COMPLETE" &&
-                        completedView.Status.IndexOf("FREE ROAM", StringComparison.Ordinal) >= 0;
+                        completedView.Status.IndexOf("COMPLETE", StringComparison.Ordinal) >= 0;
 
                     GameSaveData savedState = new GameSaveData
                     {
@@ -167,6 +191,7 @@ namespace BeyondTheBeat.Editor
 
                 bool allPass =
                     mobileDrivingPass &&
+                    mobileMappingPass &&
                     parkingPass &&
                     persistencePass &&
                     hudPass &&
@@ -177,7 +202,8 @@ namespace BeyondTheBeat.Editor
 
                 string message =
                     "[Beyond The Beat] Phase 1 MVP exit-gate repository validation\n" +
-                    $"Mobile driving regression structure: {PassFail(mobileDrivingPass)}\n" +
+                    $"Mobile driving/direct-touch structure: {PassFail(mobileDrivingPass)}\n" +
+                    $"Deterministic mobile input mapping: {PassFail(mobileMappingPass)}\n" +
                     $"Parking/interaction regression structure: {PassFail(parkingPass)}\n" +
                     $"Central save/resume integration: {PassFail(persistencePass)}\n" +
                     $"Mission HUD integration: {PassFail(hudPass)}\n" +
@@ -185,7 +211,7 @@ namespace BeyondTheBeat.Editor
                     $"Free roam before/after mission: {PassFail(freeRoamPass)}\n" +
                     $"HUD active/completed/free-roam states: {PassFail(hudStatePass)}\n" +
                     $"Integrated mission save/resume round-trip: {PassFail(saveResumePass)}\n" +
-                    "Physical Android install/input/performance validation: REQUIRED OUTSIDE CI";
+                    "Physical Android install/input/presentation validation: REQUIRED OUTSIDE CI";
 
                 if (allPass)
                 {

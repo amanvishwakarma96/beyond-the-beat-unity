@@ -21,6 +21,7 @@ concurrency:
 
 jobs:
   build-mvp-exit:
+    if: ${{ github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'phase2/') && github.head_ref != 'hotfix/android-controls-presentation') }}
     name: Build Phase 1 MVP exit candidate APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
@@ -40,12 +41,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           if [[ -z "${UNITY_LICENSE:-}" && -z "${UNITY_SERIAL:-}" ]]; then
             echo "::error::Configure UNITY_LICENSE for Unity Personal, or UNITY_SERIAL for a paid Unity license."
             exit 1
           fi
-
           if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
             echo "::error::GameCI Unity Builder requires UNITY_EMAIL and UNITY_PASSWORD together with UNITY_LICENSE/UNITY_SERIAL."
             exit 1
@@ -106,45 +105,27 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           EXPECTED_APK="BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}.apk"
-          APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-            -type f \
-            -name "${EXPECTED_APK}" \
-            -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-            -not -path "${GITHUB_WORKSPACE}/Library/*" \
-            -print -quit)"
-
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name "${EXPECTED_APK}" -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
           if [[ -z "${APK_PATH}" ]]; then
-            APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-              -type f \
-              -name '*.apk' \
-              -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-              -not -path "${GITHUB_WORKSPACE}/Library/*" \
-              -print -quit)"
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
           fi
-
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
             echo "::error::Unity completed without a discoverable Phase 1 MVP APK."
             find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
             exit 1
           fi
-
           STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase1MVP"
           rm -rf "${STAGE_DIR}"
           mkdir -p "${STAGE_DIR}"
-
           APK_FILE="BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
-
           APK_SIZE_BYTES="$(stat -c%s "${STAGED_APK}")"
           APK_SHA256="$(sha256sum "${STAGED_APK}" | awk '{print $1}')"
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/{print $2; exit}' "${GITHUB_WORKSPACE}/ProjectSettings/ProjectVersion.txt")"
-
           printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
-
           cat > "${STAGE_DIR}/Phase1-MVP-Artifact-Manifest.txt" <<EOF
           Beyond The Beat — Phase 1 MVP Exit Candidate
           Artifact name: BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}
@@ -157,15 +138,8 @@ jobs:
           Unity version: ${UNITY_VERSION}
           Build type: Unity Development APK
           Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
-
-          Scope: Phase 1 Issues #27-#30 integrated MVP candidate: world/zone, Reach Location mission,
-          local save/resume, mission HUD, free-roam semantics, and inherited mobile-driving/parking regression checks.
-
-          IMPORTANT: CI success proves deterministic generation/validation/build only. Final Phase 1 PASS/PASS WITH ACCEPTED
-          KNOWN ISSUES requires physical Android install, launch, touch-control, mission, save/resume, parking, and performance evidence
-          recorded in Docs/Validation/PHASE_1_VALIDATION.md.
+          IMPORTANT: CI success proves deterministic generation/validation/build only.
           EOF
-
           {
             echo "artifact_name=BeyondTheBeat-Phase1-MVP-${GITHUB_RUN_NUMBER}"
             echo "apk_path=artifact/Phase1MVP/${APK_FILE}"
@@ -194,6 +168,5 @@ jobs:
             echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
-            echo "- Repository-side Issue #30 integration checks: completed in Unity build automation."
             echo "- Final Phase 1 sign-off: pending physical Android validation report."
           } >> "${GITHUB_STEP_SUMMARY}"

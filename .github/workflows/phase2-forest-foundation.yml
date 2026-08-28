@@ -1,4 +1,4 @@
-name: Phase 2 Reach + Survive Android
+name: Current Android Test Build
 
 on:
   workflow_dispatch:
@@ -16,12 +16,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: phase2-reach-survive-${{ github.ref }}
+  group: current-android-test-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  build-reach-survive:
-    name: Build Phase 2 Reach + Survive APK
+  build-current-test:
+    name: Build TEST THIS APK candidate
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -55,9 +55,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Phase2-ReachSurvive-v1-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          key: Library-CurrentAndroidTest-v2-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
-      - name: Generate, validate, and build Phase 2 Reach + Survive APK
+      - name: Generate, validate, and build current Android test APK
         id: unity-build
         uses: game-ci/unity-builder@v5.0.0
         env:
@@ -69,7 +69,7 @@ jobs:
           targetPlatform: Android
           unityVersion: auto
           buildMethod: BeyondTheBeat.Editor.Phase2BuildAutomation.BuildAndroid
-          buildName: BeyondTheBeat-Phase2-ReachSurvive-${{ github.run_number }}
+          buildName: BeyondTheBeat-TEST-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
           version: 0.2.${{ github.run_number }}
@@ -77,64 +77,54 @@ jobs:
           androidExportType: androidPackage
           allowDirtyBuild: true
 
-      - name: Print Phase 2 diagnostics
+      - name: Print current-build diagnostics
         if: always()
         shell: bash
         run: |
-          echo "=== Beyond The Beat Phase 2 Reach + Survive diagnostics ==="
+          echo "=== Beyond The Beat current Android test diagnostics ==="
           DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase2-ci-diagnostics.log"
           if [[ -f "${DIAGNOSTICS}" ]]; then
             grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
             echo "--- diagnostics tail ---"
-            tail -n 360 "${DIAGNOSTICS}"
+            tail -n 420 "${DIAGNOSTICS}"
           else
-            echo "No Phase 2 diagnostics file was produced."
+            echo "No current-build diagnostics file was produced."
           fi
 
-      - name: Upload Phase 2 diagnostics
-        if: always()
+      - name: Upload diagnostics on failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: Phase2-ReachSurvive-CI-Diagnostics-${{ github.run_number }}
+          name: FAILED-BUILD-DIAGNOSTICS-${{ github.run_number }}
           path: build/phase2-ci-diagnostics.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0
 
-      - name: Create Phase 2 Reach + Survive artifact manifest
+      - name: Create TEST THIS BUILD manifest
         id: manifest
         shell: bash
         run: |
           set -euo pipefail
 
-          EXPECTED_APK="BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}.apk"
-          APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-            -type f \
-            -name "${EXPECTED_APK}" \
-            -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-            -not -path "${GITHUB_WORKSPACE}/Library/*" \
-            -print -quit)"
+          EXPECTED_APK="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name "${EXPECTED_APK}" -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
 
           if [[ -z "${APK_PATH}" ]]; then
-            APK_PATH="$(find "${GITHUB_WORKSPACE}" \
-              -type f \
-              -name '*.apk' \
-              -not -path "${GITHUB_WORKSPACE}/artifact/*" \
-              -not -path "${GITHUB_WORKSPACE}/Library/*" \
-              -print -quit)"
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
           fi
 
           if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
-            echo "::error::Unity completed without a discoverable Phase 2 Reach + Survive APK."
+            echo "::error::Unity completed without a discoverable current Android test APK."
             find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
             exit 1
           fi
 
-          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/Phase2ReachSurvive"
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/TestThisBuild"
           rm -rf "${STAGE_DIR}"
           mkdir -p "${STAGE_DIR}"
 
-          APK_FILE="BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}.apk"
+          APK_FILE="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
 
@@ -145,39 +135,43 @@ jobs:
 
           printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
 
-          cat > "${STAGE_DIR}/Phase2-ReachSurvive-Artifact-Manifest.txt" <<EOF
-          Beyond The Beat — Phase 2 Reach + Survive Artifact
-          Artifact name: BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}
-          APK file: ${APK_FILE}
-          APK size (bytes): ${APK_SIZE_BYTES}
-          SHA-256: ${APK_SHA256}
-          Source commit SHA: ${SOURCE_SHA}
-          Workflow checkout SHA: ${GITHUB_SHA}
-          GitHub Actions run: ${RUN_URL}
-          Unity version: ${UNITY_VERSION}
-          Build type: Unity Development APK
-          Generated UTC: $(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          cat > "${STAGE_DIR}/INSTALL-THIS-BUILD.txt" <<EOF
+          BEYOND THE BEAT — INSTALL THIS BUILD
 
-          Scope: Phase 2 Issue #37 data-driven Reach + Survive mission on top of Issues #35 and #36.
-          Validation covers Reach Location regression, target-zone gating, continuous survival duration, exit reset, depletion failure, and HUD progress presentation.
-          Final Phase 2 persistence/integration/performance/device validation remains Issue #38.
-          Phase 1 Issue #30 still requires physical Android sign-off; Phase 2 development is proceeding by explicit project-owner instruction.
+          APK: ${APK_FILE}
+          Artifact: TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}
+          Source commit: ${SOURCE_SHA}
+          SHA-256: ${APK_SHA256}
+          Unity: ${UNITY_VERSION}
+          Workflow: ${RUN_URL}
+
+          This is the ONLY APK intended for current device testing.
+          Phase 0 and Phase 1 prerequisite validation runs are not separate install targets on Phase 2 pull requests.
+
+          Device acceptance priorities:
+          1. Left/right steering responds to touch.
+          2. GO + steering works simultaneously.
+          3. BRAKE/REV + steering works simultaneously.
+          4. ACTION responds while another control is held.
+          5. Touch release never leaves a control stuck.
+          6. Driving HUD and mission HUD remain readable and do not block controls.
+          7. World presentation is visibly authored rather than raw Unity test geometry.
           EOF
 
           {
-            echo "artifact_name=BeyondTheBeat-Phase2-ReachSurvive-${GITHUB_RUN_NUMBER}"
-            echo "apk_path=artifact/Phase2ReachSurvive/${APK_FILE}"
+            echo "artifact_name=TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}"
+            echo "apk_path=artifact/TestThisBuild/${APK_FILE}"
             echo "sha256=${APK_SHA256}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Upload Phase 2 Reach + Survive artifact
+      - name: Upload TEST THIS BUILD APK
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.manifest.outputs.artifact_name }}
           path: |
-            artifact/Phase2ReachSurvive/BeyondTheBeat-Phase2-ReachSurvive-${{ github.run_number }}.apk
-            artifact/Phase2ReachSurvive/Phase2-ReachSurvive-Artifact-Manifest.txt
-            artifact/Phase2ReachSurvive/SHA256SUMS.txt
+            artifact/TestThisBuild/BeyondTheBeat-TEST-${{ github.run_number }}.apk
+            artifact/TestThisBuild/INSTALL-THIS-BUILD.txt
+            artifact/TestThisBuild/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -186,12 +180,12 @@ jobs:
         shell: bash
         run: |
           {
-            echo "## Beyond The Beat — Phase 2 Reach + Survive"
+            echo "# INSTALL THIS APK"
             echo
-            echo "- Artifact: \`${{ steps.manifest.outputs.artifact_name }}\`"
-            echo "- APK: \`${{ steps.manifest.outputs.apk_path }}\`"
+            echo "- Artifact: **${{ steps.manifest.outputs.artifact_name }}**"
+            echo "- APK: **${{ steps.manifest.outputs.apk_path }}**"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
-            echo "- Scope: Issue #37 Reach + Survive mission; final Phase 2 exit remains #38."
-            echo "- Phase 1 physical Android exit sign-off remains pending under Issue #30."
+            echo
+            echo "This is the single current device-test build."
           } >> "${GITHUB_STEP_SUMMARY}"
