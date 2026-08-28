@@ -8,7 +8,8 @@ namespace BeyondTheBeat.World
     {
         Urban = 0,
         OffRoad = 1,
-        Forest = 2
+        Forest = 2,
+        Restricted = 3
     }
 
     [RequireComponent(typeof(Collider))]

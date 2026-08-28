@@ -55,7 +55,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-CurrentAndroidTest-v2-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          key: Library-CurrentAndroidTest-v3-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
       - name: Generate, validate, and build current Android test APK
         id: unity-build
@@ -68,11 +68,11 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase2BuildAutomation.BuildAndroid
+          buildMethod: BeyondTheBeat.Editor.Phase3BuildAutomation.BuildAndroid
           buildName: BeyondTheBeat-TEST-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
-          version: 0.2.${{ github.run_number }}
+          version: 0.3.${{ github.run_number }}
           androidVersionCode: ${{ github.run_number }}
           androidExportType: androidPackage
           allowDirtyBuild: true
@@ -82,7 +82,7 @@ jobs:
         shell: bash
         run: |
           echo "=== Beyond The Beat current Android test diagnostics ==="
-          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase2-ci-diagnostics.log"
+          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase3-ci-diagnostics.log"
           if [[ -f "${DIAGNOSTICS}" ]]; then
             grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
             echo "--- diagnostics tail ---"
@@ -96,7 +96,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: FAILED-BUILD-DIAGNOSTICS-${{ github.run_number }}
-          path: build/phase2-ci-diagnostics.log
+          path: |
+            build/phase3-ci-diagnostics.log
+            build/phase2-ci-diagnostics.log
           if-no-files-found: warn
           retention-days: 14
           compression-level: 0
@@ -146,16 +148,14 @@ jobs:
           Workflow: ${RUN_URL}
 
           This is the ONLY APK intended for current device testing.
-          Phase 0 and Phase 1 prerequisite validation runs are not separate install targets on Phase 2 pull requests.
 
-          Device acceptance priorities:
-          1. Left/right steering responds to touch.
-          2. GO + steering works simultaneously.
-          3. BRAKE/REV + steering works simultaneously.
-          4. ACTION responds while another control is held.
-          5. Touch release never leaves a control stuck.
-          6. Driving HUD and mission HUD remain readable and do not block controls.
-          7. World presentation is visibly authored rather than raw Unity test geometry.
+          Phase 3 acceptance priorities:
+          1. Existing LEFT/RIGHT/GO/REV/ACTION controls still work, including multitouch combinations.
+          2. Forest survival and existing Reach Location / Reach + Survive flows remain functional.
+          3. The restricted-area gate starts closed and physically blocks entry.
+          4. Moving sufficient physics weight onto the pressure plate unlocks and opens the gate.
+          5. Removing the weight resets the puzzle and relocks/closes the gate reliably.
+          6. Driving, parking, free roam, save/resume, HUD, and performance remain regression-safe.
           EOF
 
           {
@@ -187,5 +187,5 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build."
+            echo "This is the single current device-test build for the Phase 3 restricted-area milestone."
           } >> "${GITHUB_STEP_SUMMARY}"

@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build-android-apk:
-    if: ${{ github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'phase2/') && github.head_ref != 'hotfix/android-controls-presentation') }}
+    if: ${{ github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'phase2/') && !startsWith(github.head_ref, 'phase3/') && !startsWith(github.head_ref, 'hotfix/')) }}
     name: Build shareable Phase 0 APK
     runs-on: ubuntu-latest
     timeout-minutes: 75
