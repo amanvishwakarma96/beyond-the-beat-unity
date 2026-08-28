@@ -21,12 +21,15 @@ namespace BeyondTheBeat.Editor
         public static void BuildAndroid()
         {
             InitializeDiagnostics();
-            AppendDiagnostic(
-                $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
-
             Application.logMessageReceived += CaptureLog;
+
             try
             {
+                InputBackendBuildGuard.EnsureBothInputBackends();
+                AppendDiagnostic("Android input backend guard PASS: Active Input Handling forced to Both.");
+                AppendDiagnostic(
+                    $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
+
                 PrepareReachAndSurviveInternal();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic("BuildAndroid PASS.");
