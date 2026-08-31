@@ -6,7 +6,8 @@ namespace BeyondTheBeat.Missions
     public enum MissionObjectiveType
     {
         ReachLocation = 0,
-        ReachAndSurvive = 1
+        ReachAndSurvive = 1,
+        ReachAndSolve = 2
     }
 
     [CreateAssetMenu(
@@ -20,6 +21,7 @@ namespace BeyondTheBeat.Missions
         [SerializeField] private MissionObjectiveType objectiveType = MissionObjectiveType.ReachLocation;
         [SerializeField] private string targetZoneId = string.Empty;
         [SerializeField, Min(0f)] private float survivalDurationSeconds;
+        [SerializeField] private string targetPuzzleId = string.Empty;
 
         public string MissionId => missionId;
         public string DisplayName => displayName;
@@ -27,6 +29,7 @@ namespace BeyondTheBeat.Missions
         public MissionObjectiveType ObjectiveType => objectiveType;
         public string TargetZoneId => targetZoneId;
         public float SurvivalDurationSeconds => survivalDurationSeconds;
+        public string TargetPuzzleId => targetPuzzleId;
 
         public bool IsConfigured
         {
@@ -43,6 +46,9 @@ namespace BeyondTheBeat.Missions
                         return !string.IsNullOrWhiteSpace(targetZoneId);
                     case MissionObjectiveType.ReachAndSurvive:
                         return !string.IsNullOrWhiteSpace(targetZoneId) && survivalDurationSeconds > 0f;
+                    case MissionObjectiveType.ReachAndSolve:
+                        return !string.IsNullOrWhiteSpace(targetZoneId) &&
+                               !string.IsNullOrWhiteSpace(targetPuzzleId);
                     default:
                         return false;
                 }
