@@ -23,7 +23,7 @@ namespace BeyondTheBeat.Editor
                 AppendDiagnostic(
                     $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
-                PrepareRestrictedAreaInternal();
+                PrepareReachAndSolveInternal();
                 EnsurePhase3SceneAndSettings();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic("BuildAndroid PASS.");
@@ -44,6 +44,14 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("PrepareRestrictedArea PASS.");
         }
 
+        public static void PrepareReachAndSolve()
+        {
+            InitializeDiagnostics();
+            PrepareReachAndSolveInternal();
+            EnsurePhase3SceneAndSettings();
+            AppendDiagnostic("PrepareReachAndSolve PASS.");
+        }
+
         private static void PrepareRestrictedAreaInternal()
         {
             Debug.Log("[Beyond The Beat] Starting Phase 3 restricted-area foundation CI preparation.");
@@ -57,6 +65,19 @@ namespace BeyondTheBeat.Editor
 
             Phase3RestrictedAreaBuilder.ValidateRestrictedAreaFoundationOrThrow();
             AppendDiagnostic("Phase 3 restricted-area structural/behavior validation PASS.");
+        }
+
+        private static void PrepareReachAndSolveInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 3 Reach + Solve mission CI preparation.");
+            AppendDiagnostic("Phase 3 Reach + Solve mission preparation START.");
+
+            PrepareRestrictedAreaInternal();
+            Phase3MissionBuilder.BuildReachAndSolveMission();
+            AppendDiagnostic("Phase 3 Reach + Solve mission generation completed.");
+
+            Phase3MissionBuilder.ValidateReachAndSolveMissionOrThrow();
+            AppendDiagnostic("Phase 3 Reach + Solve mission validation PASS.");
         }
 
         private static void EnsurePhase3SceneAndSettings()
@@ -89,7 +110,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase3-foundation-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase3-reach-and-solve-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -116,7 +137,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 3 restricted-area development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 3 Reach + Solve development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -141,7 +162,7 @@ namespace BeyondTheBeat.Editor
             string stagedPath = StageApkInsideProject(outputPath);
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
-                "[Beyond The Beat] Phase 3 restricted-area Android APK build PASS. " +
+                "[Beyond The Beat] Phase 3 Reach + Solve Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
         }
