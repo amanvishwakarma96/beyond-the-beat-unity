@@ -6,12 +6,15 @@ namespace BeyondTheBeat.Puzzles
     [DisallowMultipleComponent]
     public sealed class PuzzleStateController : MonoBehaviour
     {
+        [SerializeField] private string puzzleId = "puzzle";
         [SerializeField] private bool solvedOnStart;
 
         private bool initialized;
         private bool isSolved;
 
+        public string PuzzleId => puzzleId;
         public bool IsSolved => isSolved;
+        public bool IsConfigured => !string.IsNullOrWhiteSpace(puzzleId);
 
         public event Action<bool> StateChanged;
         public event Action Solved;
