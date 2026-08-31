@@ -76,8 +76,8 @@ namespace BeyondTheBeat.UI
 
             bool showProgress = mission != null &&
                                 state == MissionState.Active &&
-                                mission.ObjectiveType == MissionObjectiveType.ReachAndSurvive &&
-                                progress.TargetContextActive;
+                                ((mission.ObjectiveType == MissionObjectiveType.ReachAndSurvive && progress.TargetContextActive) ||
+                                 mission.ObjectiveType == MissionObjectiveType.ReachAndSolve);
 
             if (progressRoot != null)
             {
@@ -97,7 +97,8 @@ namespace BeyondTheBeat.UI
                     mission.ObjectiveType,
                     false,
                     0f,
-                    mission.SurvivalDurationSeconds)
+                    mission.SurvivalDurationSeconds,
+                    false)
                 : default;
             return CreateSnapshot(mission, state, progress);
         }
@@ -121,6 +122,11 @@ namespace BeyondTheBeat.UI
                     if (mission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
                     {
                         return CreateReachAndSurviveSnapshot(mission, progress);
+                    }
+
+                    if (mission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
+                    {
+                        return CreateReachAndSolveSnapshot(mission, progress);
                     }
 
                     return new MissionHudSnapshot(
@@ -187,6 +193,42 @@ namespace BeyondTheBeat.UI
                 mission.DisplayName,
                 $"Hold out in the forest • {elapsed}/{required}s",
                 $"SURVIVING • {percent}%");
+        }
+
+        private static MissionHudSnapshot CreateReachAndSolveSnapshot(
+            MissionDefinition mission,
+            MissionProgressSnapshot progress)
+        {
+            if (progress.PuzzleSolved && !progress.TargetContextActive)
+            {
+                return new MissionHudSnapshot(
+                    mission.DisplayName,
+                    "The access gate is unlocked. Enter the restricted area.",
+                    "PUZZLE SOLVED • ENTER AREA");
+            }
+
+            if (!progress.PuzzleSolved && progress.TargetContextActive)
+            {
+                return new MissionHudSnapshot(
+                    mission.DisplayName,
+                    "You reached the restricted area. Solve the configured access puzzle.",
+                    "AREA REACHED • SOLVE PUZZLE");
+            }
+
+            if (progress.PuzzleSolved && progress.TargetContextActive)
+            {
+                return new MissionHudSnapshot(
+                    mission.DisplayName,
+                    "Restricted-area objective complete.",
+                    "OBJECTIVE COMPLETE");
+            }
+
+            return new MissionHudSnapshot(
+                mission.DisplayName,
+                string.IsNullOrWhiteSpace(mission.Description)
+                    ? "Solve the access puzzle and reach the restricted area."
+                    : mission.Description,
+                "SOLVE PUZZLE • REACH AREA");
         }
 
         private void Subscribe()
