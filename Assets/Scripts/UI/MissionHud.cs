@@ -12,6 +12,7 @@ namespace BeyondTheBeat.UI
         [SerializeField] private Text titleText;
         [SerializeField] private Text objectiveText;
         [SerializeField] private Text statusText;
+        [SerializeField] private Text phaseStepText;
         [SerializeField] private GameObject progressRoot;
         [SerializeField] private Image progressFill;
 
@@ -20,6 +21,7 @@ namespace BeyondTheBeat.UI
         public Text TitleText => titleText;
         public Text ObjectiveText => objectiveText;
         public Text StatusText => statusText;
+        public Text PhaseStepText => phaseStepText;
         public GameObject ProgressRoot => progressRoot;
         public Image ProgressFill => progressFill;
 
@@ -72,6 +74,17 @@ namespace BeyondTheBeat.UI
             if (statusText != null)
             {
                 statusText.text = AppendSurvivalResourceStatus(snapshot.Status, mission, state);
+            }
+
+            bool showReachAndSolveSteps = mission != null &&
+                                          state == MissionState.Active &&
+                                          mission.ObjectiveType == MissionObjectiveType.ReachAndSolve;
+            if (phaseStepText != null)
+            {
+                phaseStepText.gameObject.SetActive(showReachAndSolveSteps);
+                phaseStepText.text = showReachAndSolveSteps
+                    ? CreateReachAndSolveStepLabel(progress)
+                    : string.Empty;
             }
 
             bool showProgress = mission != null &&
@@ -156,6 +169,13 @@ namespace BeyondTheBeat.UI
             }
         }
 
+        public static string CreateReachAndSolveStepLabel(MissionProgressSnapshot progress)
+        {
+            string puzzleState = progress.PuzzleSolved ? "DONE" : "NEXT";
+            string areaState = progress.TargetContextActive ? "DONE" : "NEXT";
+            return $"PUZZLE {puzzleState}   |   AREA {areaState}";
+        }
+
         private string AppendSurvivalResourceStatus(string baseStatus, MissionDefinition mission, MissionState state)
         {
             if (mission == null ||
@@ -203,7 +223,7 @@ namespace BeyondTheBeat.UI
             {
                 return new MissionHudSnapshot(
                     mission.DisplayName,
-                    "The access gate is unlocked. Enter the restricted area.",
+                    "Gate unlocked. Enter the restricted area.",
                     "PUZZLE SOLVED • ENTER AREA");
             }
 
@@ -211,7 +231,7 @@ namespace BeyondTheBeat.UI
             {
                 return new MissionHudSnapshot(
                     mission.DisplayName,
-                    "You reached the restricted area. Solve the configured access puzzle.",
+                    "Restricted area reached. Complete the access puzzle.",
                     "AREA REACHED • SOLVE PUZZLE");
             }
 
@@ -226,7 +246,7 @@ namespace BeyondTheBeat.UI
             return new MissionHudSnapshot(
                 mission.DisplayName,
                 string.IsNullOrWhiteSpace(mission.Description)
-                    ? "Solve the access puzzle and reach the restricted area."
+                    ? "Solve the access puzzle and enter the restricted area."
                     : mission.Description,
                 "SOLVE PUZZLE • REACH AREA");
         }
