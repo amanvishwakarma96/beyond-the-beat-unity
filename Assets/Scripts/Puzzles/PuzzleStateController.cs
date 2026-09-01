@@ -14,6 +14,7 @@ namespace BeyondTheBeat.Puzzles
 
         public string PuzzleId => puzzleId;
         public bool IsSolved => isSolved;
+        public bool SolvedOnStart => solvedOnStart;
         public bool IsConfigured => !string.IsNullOrWhiteSpace(puzzleId);
 
         public event Action<bool> StateChanged;
@@ -52,9 +53,21 @@ namespace BeyondTheBeat.Puzzles
             return true;
         }
 
+        public bool RestorePersistentState(bool solved)
+        {
+            InitializeIfNeeded();
+            SetSolved(solved);
+            return isSolved == solved;
+        }
+
         public bool ResetPuzzle()
         {
             return SetSolved(false);
+        }
+
+        public bool ResetToConfiguredStartState()
+        {
+            return RestorePersistentState(solvedOnStart);
         }
 
         private void InitializeIfNeeded()
