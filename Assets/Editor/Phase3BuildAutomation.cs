@@ -23,10 +23,10 @@ namespace BeyondTheBeat.Editor
                 AppendDiagnostic(
                     $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
-                PreparePersistenceInternal();
+                PrepareExitIntegrationInternal();
                 EnsurePhase3SceneAndSettings();
                 BuildDevelopmentAndroidApk();
-                AppendDiagnostic("BuildAndroid PASS.");
+                AppendDiagnostic("BuildAndroid PASS. Automated Phase 3 exit gate passed; physical Android sign-off remains required.");
             }
             catch (Exception exception)
             {
@@ -58,6 +58,14 @@ namespace BeyondTheBeat.Editor
             PreparePersistenceInternal();
             EnsurePhase3SceneAndSettings();
             AppendDiagnostic("PreparePersistence PASS.");
+        }
+
+        public static void PrepareExitIntegration()
+        {
+            InitializeDiagnostics();
+            PrepareExitIntegrationInternal();
+            EnsurePhase3SceneAndSettings();
+            AppendDiagnostic("PrepareExitIntegration PASS. Physical Android validation remains pending.");
         }
 
         private static void PrepareRestrictedAreaInternal()
@@ -101,6 +109,20 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("Phase 3 persistence/resume validation PASS.");
         }
 
+        private static void PrepareExitIntegrationInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 3 FINAL exit integration CI preparation.");
+            AppendDiagnostic("Phase 3 FINAL exit integration preparation START.");
+
+            PreparePersistenceInternal();
+            Phase3ExitBuilder.BuildExitIntegration();
+            AppendDiagnostic("Phase 3 HUD polish + exit integration generation completed.");
+
+            Phase3ExitBuilder.ValidateExitIntegrationOrThrow();
+            AppendDiagnostic(
+                "Phase 3 FINAL automated exit validation PASS. CI success does not equal physical Android sign-off.");
+        }
+
         private static void EnsurePhase3SceneAndSettings()
         {
             SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
@@ -131,7 +153,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase3-persistence-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase3-exit-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -158,7 +180,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 3 persistence/resume development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 3 final exit-validation development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -183,9 +205,10 @@ namespace BeyondTheBeat.Editor
             string stagedPath = StageApkInsideProject(outputPath);
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
-                "[Beyond The Beat] Phase 3 persistence/resume Android APK build PASS. " +
+                "[Beyond The Beat] Phase 3 final automated exit Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
-                $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
+                $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}. " +
+                "Physical Android acceptance is still required.");
         }
 
         private static string StageApkInsideProject(string outputPath)
