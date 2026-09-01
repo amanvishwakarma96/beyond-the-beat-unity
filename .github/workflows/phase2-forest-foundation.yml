@@ -150,16 +150,17 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
 
-          Phase 4 cooking milestone acceptance priorities:
+          Phase 4 vehicle repair milestone acceptance priorities:
           1. LEFT/RIGHT/GO/REV/ACTION all work on-device, including steering + throttle/brake multitouch combinations.
-          2. Drive to the Cooking Station and confirm the COOK prompt appears through the existing shared interaction path.
-          3. ACTION starts cooking once; the interaction remains active for its configured duration and completes exactly once.
-          4. Leaving the cooking trigger during an active cook cancels cleanly without counting a completed meal.
-          5. Re-entering after cancellation can start and complete cooking normally.
-          6. Cooking can be repeated after a completed cycle without duplicate input or stuck interaction state.
-          7. Existing parking remains functional and continues to use the same ACTION/interaction controller foundation.
-          8. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, camera and HUD remain regression-safe.
-          9. Record FPS/stutter/GC and thermal observations during an extended device session.
+          2. Drive the damaged prototype vehicle into the Vehicle Repair Bay and confirm the REPAIR prompt appears through the existing shared interaction path.
+          3. ACTION starts repair once; leaving the repair trigger during active repair cancels cleanly and leaves vehicle damage unchanged.
+          4. Re-entering the repair bay after cancellation can restart and complete the repair normally.
+          5. Completing repair restores the RepairableState to full condition exactly once.
+          6. A fully repaired vehicle must not offer/start another repair until it is damaged again.
+          7. After re-damage, the same repair station can run another full repair cycle without duplicate/stuck interaction state.
+          8. Cooking remains repeatable and parking continues to use the same ACTION/InteractionController foundation.
+          9. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, camera and HUD remain regression-safe.
+          10. Record FPS/stutter/GC and thermal observations during an extended device session.
 
           CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 4 milestone closure.
           EOF
@@ -193,6 +194,6 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build for the Phase 4 cooking milestone."
+            echo "This is the single current device-test build for the Phase 4 vehicle repair milestone."
             echo "CI green is not physical Android sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
