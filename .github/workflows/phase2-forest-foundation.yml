@@ -150,16 +150,16 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
 
-          Phase 4 vehicle repair milestone acceptance priorities:
+          Phase 4 mechanic job milestone acceptance priorities:
           1. LEFT/RIGHT/GO/REV/ACTION all work on-device, including steering + throttle/brake multitouch combinations.
-          2. Drive the damaged prototype vehicle into the Vehicle Repair Bay and confirm the REPAIR prompt appears through the existing shared interaction path.
-          3. ACTION starts repair once; leaving the repair trigger during active repair cancels cleanly and leaves vehicle damage unchanged.
-          4. Re-entering the repair bay after cancellation can restart and complete the repair normally.
-          5. Completing repair restores the RepairableState to full condition exactly once.
-          6. A fully repaired vehicle must not offer/start another repair until it is damaged again.
-          7. After re-damage, the same repair station can run another full repair cycle without duplicate/stuck interaction state.
+          2. At launch, confirm the mechanic-job HUD is visible, readable, non-blocking and shows the active repair job plus current CREDITS balance.
+          3. Drive the damaged prototype vehicle into the Vehicle Repair Bay and confirm the REPAIR prompt still comes through the shared interaction path.
+          4. Start repair, leave the trigger before completion, and confirm the repair cancels without job completion or credit reward.
+          5. Re-enter and complete the matching repair; confirm the job changes to JOB COMPLETE and exactly +125 CR is awarded once.
+          6. Additional ACTION attempts/repair completion signals after the completed job must not award duplicate credits.
+          7. A fully repaired target must not start a fresh mechanic job until it is damaged again; after re-damage, a new job cycle can complete and pay once.
           8. Cooking remains repeatable and parking continues to use the same ACTION/InteractionController foundation.
-          9. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, camera and HUD remain regression-safe.
+          9. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, camera and mission HUD remain regression-safe.
           10. Record FPS/stutter/GC and thermal observations during an extended device session.
 
           CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 4 milestone closure.
@@ -194,6 +194,6 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build for the Phase 4 vehicle repair milestone."
+            echo "This is the single current device-test build for the Phase 4 mechanic job milestone."
             echo "CI green is not physical Android sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
