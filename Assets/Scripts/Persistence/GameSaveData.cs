@@ -61,6 +61,19 @@ namespace BeyondTheBeat.Persistence
     }
 
     [Serializable]
+    public struct SavedPuzzleState
+    {
+        public string PuzzleId;
+        public bool IsSolved;
+
+        public SavedPuzzleState(string puzzleId, bool isSolved)
+        {
+            PuzzleId = puzzleId ?? string.Empty;
+            IsSolved = isSolved;
+        }
+    }
+
+    [Serializable]
     public sealed class GameSaveData
     {
         public int Version = SaveManager.CurrentVersion;
@@ -77,5 +90,11 @@ namespace BeyondTheBeat.Persistence
         public float SurvivalResourceValue;
         public bool SurvivalPressureActive;
         public bool SurvivalRecovering;
+
+        // Additive Phase 3 fields. Older saves deserialize with HasPhase3PuzzleState=false and
+        // no puzzle snapshots, so the restricted-area puzzle uses its configured new-game state.
+        public bool HasPhase3PuzzleState;
+        public bool MissionReachAndSolveTargetContextActive;
+        public SavedPuzzleState[] Phase3PuzzleStates = Array.Empty<SavedPuzzleState>();
     }
 }

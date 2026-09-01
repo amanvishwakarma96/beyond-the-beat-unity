@@ -23,7 +23,7 @@ namespace BeyondTheBeat.Editor
                 AppendDiagnostic(
                     $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
-                PrepareReachAndSolveInternal();
+                PreparePersistenceInternal();
                 EnsurePhase3SceneAndSettings();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic("BuildAndroid PASS.");
@@ -52,6 +52,14 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("PrepareReachAndSolve PASS.");
         }
 
+        public static void PreparePersistence()
+        {
+            InitializeDiagnostics();
+            PreparePersistenceInternal();
+            EnsurePhase3SceneAndSettings();
+            AppendDiagnostic("PreparePersistence PASS.");
+        }
+
         private static void PrepareRestrictedAreaInternal()
         {
             Debug.Log("[Beyond The Beat] Starting Phase 3 restricted-area foundation CI preparation.");
@@ -78,6 +86,19 @@ namespace BeyondTheBeat.Editor
 
             Phase3MissionBuilder.ValidateReachAndSolveMissionOrThrow();
             AppendDiagnostic("Phase 3 Reach + Solve mission validation PASS.");
+        }
+
+        private static void PreparePersistenceInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 3 persistence/resume CI preparation.");
+            AppendDiagnostic("Phase 3 persistence/resume preparation START.");
+
+            PrepareReachAndSolveInternal();
+            Phase3PersistenceBuilder.BuildPersistenceResume();
+            AppendDiagnostic("Phase 3 persistence wiring completed.");
+
+            Phase3PersistenceBuilder.ValidatePersistenceResumeOrThrow();
+            AppendDiagnostic("Phase 3 persistence/resume validation PASS.");
         }
 
         private static void EnsurePhase3SceneAndSettings()
@@ -110,7 +131,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase3-reach-and-solve-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase3-persistence-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -137,7 +158,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 3 Reach + Solve development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 3 persistence/resume development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -162,7 +183,7 @@ namespace BeyondTheBeat.Editor
             string stagedPath = StageApkInsideProject(outputPath);
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
-                "[Beyond The Beat] Phase 3 Reach + Solve Android APK build PASS. " +
+                "[Beyond The Beat] Phase 3 persistence/resume Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}.");
         }
