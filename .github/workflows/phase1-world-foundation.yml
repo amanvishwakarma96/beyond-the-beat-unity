@@ -21,7 +21,7 @@ concurrency:
 
 jobs:
   build-mvp-exit:
-    if: ${{ github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'phase2/') && !startsWith(github.head_ref, 'phase3/') && !startsWith(github.head_ref, 'hotfix/')) }}
+    if: ${{ github.event_name != 'pull_request' || (!startsWith(github.head_ref, 'phase2/') && !startsWith(github.head_ref, 'phase3/') && !startsWith(github.head_ref, 'phase4/') && !startsWith(github.head_ref, 'hotfix/')) }}
     name: Build Phase 1 MVP exit candidate APK
     runs-on: ubuntu-latest
     timeout-minutes: 75

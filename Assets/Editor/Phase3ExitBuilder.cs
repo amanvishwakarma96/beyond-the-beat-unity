@@ -408,8 +408,19 @@ namespace BeyondTheBeat.Editor
             }
 
             string workflow = File.ReadAllText(path);
+            string[] buildMethodLines = workflow
+                .Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(line => line.Trim())
+                .Where(line => line.StartsWith("buildMethod:", StringComparison.Ordinal))
+                .ToArray();
+
+            bool buildMethodPass =
+                buildMethodLines.Length == 1 &&
+                buildMethodLines[0].StartsWith("buildMethod: BeyondTheBeat.Editor.Phase", StringComparison.Ordinal) &&
+                buildMethodLines[0].EndsWith("BuildAutomation.BuildAndroid", StringComparison.Ordinal);
+
             return workflow.Contains("name: Current Android Test Build") &&
-                   workflow.Contains("buildMethod: BeyondTheBeat.Editor.Phase3BuildAutomation.BuildAndroid") &&
+                   buildMethodPass &&
                    workflow.Contains("TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}") &&
                    workflow.Contains("This is the ONLY APK intended for current device testing.");
         }
