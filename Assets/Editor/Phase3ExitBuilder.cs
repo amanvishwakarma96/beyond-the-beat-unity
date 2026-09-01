@@ -358,10 +358,14 @@ namespace BeyondTheBeat.Editor
                 return false;
             }
 
+            manager.ClearMission();
             puzzle.ResetPuzzle();
+
+            // Editor/batch-mode validation does not rely on Play Mode lifecycle callbacks. Rebind the
+            // same event sources explicitly so this test exercises the production event-driven path.
+            manager.RebindPuzzleSources();
             binding.Rebind();
             binding.Synchronize();
-            manager.ClearMission();
 
             bool startsLocked = gate.IsLocked && !puzzle.IsSolved;
             bool started = manager.StartMission(mission);
@@ -380,6 +384,16 @@ namespace BeyondTheBeat.Editor
             puzzle.ResetPuzzle();
             binding.Synchronize();
             bool resetsForFreeRoam = !puzzle.IsSolved && gate.IsLocked && manager.State == MissionState.Inactive;
+
+            Debug.Log(
+                "[Beyond The Beat] Phase 3 Reach + Solve lifecycle detail: " +
+                $"startsLocked={PassFail(startsLocked)}, " +
+                $"started={PassFail(started)}, " +
+                $"targetAccepted={PassFail(targetAccepted)}, " +
+                $"waitsForPuzzle={PassFail(waitsForPuzzle)}, " +
+                $"completesAndUnlocks={PassFail(completesAndUnlocks)}, " +
+                $"resetsForFreeRoam={PassFail(resetsForFreeRoam)}, " +
+                $"finalMissionState={manager.State}, finalPuzzleSolved={puzzle.IsSolved}, finalGateLocked={gate.IsLocked}.");
 
             return startsLocked && started && targetAccepted && waitsForPuzzle && completesAndUnlocks && resetsForFreeRoam;
         }
