@@ -150,19 +150,19 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
 
-          Phase 4 mechanic job milestone acceptance priorities:
-          1. LEFT/RIGHT/GO/REV/ACTION all work on-device, including steering + throttle/brake multitouch combinations.
-          2. At launch, confirm the mechanic-job HUD is visible, readable, non-blocking and shows the active repair job plus current CREDITS balance.
-          3. Drive the damaged prototype vehicle into the Vehicle Repair Bay and confirm the REPAIR prompt still comes through the shared interaction path.
-          4. Start repair, leave the trigger before completion, and confirm the repair cancels without job completion or credit reward.
-          5. Re-enter and complete the matching repair; confirm the job changes to JOB COMPLETE and exactly +125 CR is awarded once.
-          6. Additional ACTION attempts/repair completion signals after the completed job must not award duplicate credits.
-          7. A fully repaired target must not start a fresh mechanic job until it is damaged again; after re-damage, a new job cycle can complete and pay once.
-          8. Cooking remains repeatable and parking continues to use the same ACTION/InteractionController foundation.
-          9. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, camera and mission HUD remain regression-safe.
-          10. Record FPS/stutter/GC and thermal observations during an extended device session.
+          Phase 4 FINAL exit acceptance priorities:
+          1. LEFT/RIGHT/GO/REV/ACTION all work on-device, including simultaneous steering + pedal + ACTION combinations; actual vehicle movement/steering/braking/reverse and camera remain usable.
+          2. PARKING: drive into the parking bay, meet the stop condition, confirm prompt/ACTION completion occurs once, then leave/re-enter and confirm the visit resets.
+          3. COOK: confirm COOK prompt, timed completion, trigger-exit cancellation without completion, restart after re-entry, and repeat cooking without stuck/duplicate state.
+          4. REPAIR: confirm REPAIR appears only while the prototype vehicle is damaged; cancel leaves damage unchanged; completion repairs once; fully repaired target rejects repair; re-damage allows another cycle.
+          5. MECHANIC JOB: confirm the non-blocking HUD shows the active job and CREDITS; cancelled repair does not complete/pay; matching repair completes the job and awards exactly +125 CR once; duplicate signals do not double-pay; re-damage/new cycle works.
+          6. Confirm Parking, Cook and Repair all continue to use the same ACTION/InteractionController path and the mechanic job consumes the existing RepairStation completion rather than a separate input flow.
+          7. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, mission HUD and free roam remain regression-safe.
+          8. Confirm Phase 4 HUD elements do not consume or block driving/ACTION touches.
+          9. Record FPS/stutter/GC observations through driving plus all four Phase 4 activities.
+          10. Record thermal/battery observations during an extended device session and capture device model + Android version in PHASE_4_VALIDATION.md.
 
-          CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 4 milestone closure.
+          CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 4 sign-off or validated progression to Phase 5.
           EOF
 
           {
@@ -194,6 +194,6 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build for the Phase 4 mechanic job milestone."
+            echo "This is the single current device-test build for the Phase 4 FINAL exit gate."
             echo "CI green is not physical Android sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"

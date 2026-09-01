@@ -23,10 +23,10 @@ namespace BeyondTheBeat.Editor
                 AppendDiagnostic(
                     $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
-                PrepareMechanicJobInternal();
+                PrepareExitInternal();
                 EnsurePhase4SceneAndSettings();
                 BuildDevelopmentAndroidApk();
-                AppendDiagnostic("BuildAndroid PASS. Automated Phase 4 mechanic job milestone passed; physical Android sign-off remains required.");
+                AppendDiagnostic("BuildAndroid PASS. Automated Phase 4 final exit gate passed; physical Android sign-off remains required.");
             }
             catch (Exception exception)
             {
@@ -58,6 +58,14 @@ namespace BeyondTheBeat.Editor
             PrepareMechanicJobInternal();
             EnsurePhase4SceneAndSettings();
             AppendDiagnostic("PrepareMechanicJob PASS. Physical Android validation remains pending.");
+        }
+
+        public static void PrepareExit()
+        {
+            InitializeDiagnostics();
+            PrepareExitInternal();
+            EnsurePhase4SceneAndSettings();
+            AppendDiagnostic("PrepareExit PASS. Automated Phase 4 exit checks passed; physical Android validation remains pending.");
         }
 
         private static void PrepareCookingInternal()
@@ -101,6 +109,16 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("Phase 4 mechanic job data/reward/HUD validation PASS.");
         }
 
+        private static void PrepareExitInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 4 FINAL exit integration validation.");
+            AppendDiagnostic("Phase 4 FINAL exit validation START.");
+
+            PrepareMechanicJobInternal();
+            Phase4ExitBuilder.ValidateFinalExitIntegrationOrThrow();
+            AppendDiagnostic("Phase 4 FINAL consolidated interaction/input/world/workflow/documentation validation PASS.");
+        }
+
         private static void EnsurePhase4SceneAndSettings()
         {
             SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
@@ -131,7 +149,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase4-mechanic-job-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase4-exit-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -158,7 +176,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 4 mechanic job development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 4 final-exit development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -183,10 +201,10 @@ namespace BeyondTheBeat.Editor
             string stagedPath = StageApkInsideProject(outputPath);
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
-                "[Beyond The Beat] Phase 4 mechanic job Android APK build PASS. " +
+                "[Beyond The Beat] Phase 4 final-exit Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}. " +
-                "Physical Android acceptance is still required.");
+                "Physical Android acceptance is still required before formal Phase 4 sign-off.");
         }
 
         private static string StageApkInsideProject(string outputPath)
