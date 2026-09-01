@@ -55,7 +55,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-CurrentAndroidTest-v3-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
+          key: Library-CurrentAndroidTest-v4-${{ hashFiles('Assets/**/*.cs', 'Assets/**/*.asmdef', 'Assets/**/*.asmref', 'Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}
 
       - name: Generate, validate, and build current Android test APK
         id: unity-build
@@ -68,11 +68,11 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase3BuildAutomation.BuildAndroid
+          buildMethod: BeyondTheBeat.Editor.Phase4BuildAutomation.BuildAndroid
           buildName: BeyondTheBeat-TEST-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
-          version: 0.3.${{ github.run_number }}
+          version: 0.4.${{ github.run_number }}
           androidVersionCode: ${{ github.run_number }}
           androidExportType: androidPackage
           allowDirtyBuild: true
@@ -82,7 +82,7 @@ jobs:
         shell: bash
         run: |
           echo "=== Beyond The Beat current Android test diagnostics ==="
-          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase3-ci-diagnostics.log"
+          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase4-ci-diagnostics.log"
           if [[ -f "${DIAGNOSTICS}" ]]; then
             grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
             echo "--- diagnostics tail ---"
@@ -97,6 +97,7 @@ jobs:
         with:
           name: FAILED-BUILD-DIAGNOSTICS-${{ github.run_number }}
           path: |
+            build/phase4-ci-diagnostics.log
             build/phase3-ci-diagnostics.log
             build/phase2-ci-diagnostics.log
           if-no-files-found: warn
@@ -149,19 +150,18 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
 
-          Phase 3 exit acceptance priorities:
+          Phase 4 cooking milestone acceptance priorities:
           1. LEFT/RIGHT/GO/REV/ACTION all work on-device, including steering + throttle/brake multitouch combinations.
-          2. Actual vehicle movement, steering and braking match the visible control state; ACTION does not block driving input.
-          3. The restricted-area gate starts closed and physically blocks entry.
-          4. The crate/pressure-plate physics interaction solves the puzzle and unlocks/opens the gate.
-          5. Puzzle reset/retry relocks/closes the gate without a stuck or duplicate objective state.
-          6. Reach + Solve HUD correctly shows PUZZLE/AREA progress for puzzle-first and area-first flows.
-          7. Completing both conditions shows Mission Complete and leaves free roam usable.
-          8. Save/relaunch preserves unsolved and solved puzzle/mission state; reset progress restores the new-game gate/puzzle state.
-          9. Forest survival, parking, camera, HUD and existing free-roam behavior remain regression-safe.
-          10. Record FPS/stutter/GC and thermal observations during an extended device session.
+          2. Drive to the Cooking Station and confirm the COOK prompt appears through the existing shared interaction path.
+          3. ACTION starts cooking once; the interaction remains active for its configured duration and completes exactly once.
+          4. Leaving the cooking trigger during an active cook cancels cleanly without counting a completed meal.
+          5. Re-entering after cancellation can start and complete cooking normally.
+          6. Cooking can be repeated after a completed cycle without duplicate input or stuck interaction state.
+          7. Existing parking remains functional and continues to use the same ACTION/interaction controller foundation.
+          8. Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle, save/resume, camera and HUD remain regression-safe.
+          9. Record FPS/stutter/GC and thermal observations during an extended device session.
 
-          CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 3 closure.
+          CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 4 milestone closure.
           EOF
 
           {
@@ -193,6 +193,6 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build for the Phase 3 exit-validation milestone."
+            echo "This is the single current device-test build for the Phase 4 cooking milestone."
             echo "CI green is not physical Android sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
