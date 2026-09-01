@@ -23,10 +23,10 @@ namespace BeyondTheBeat.Editor
                 AppendDiagnostic(
                     $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
-                PrepareCookingInternal();
+                PrepareRepairInternal();
                 EnsurePhase4SceneAndSettings();
                 BuildDevelopmentAndroidApk();
-                AppendDiagnostic("BuildAndroid PASS. Automated Phase 4 cooking milestone passed; physical Android sign-off remains required.");
+                AppendDiagnostic("BuildAndroid PASS. Automated Phase 4 vehicle repair milestone passed; physical Android sign-off remains required.");
             }
             catch (Exception exception)
             {
@@ -44,6 +44,14 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("PrepareCooking PASS. Physical Android validation remains pending.");
         }
 
+        public static void PrepareRepair()
+        {
+            InitializeDiagnostics();
+            PrepareRepairInternal();
+            EnsurePhase4SceneAndSettings();
+            AppendDiagnostic("PrepareRepair PASS. Physical Android validation remains pending.");
+        }
+
         private static void PrepareCookingInternal()
         {
             Debug.Log("[Beyond The Beat] Starting Phase 4 cooking interaction CI preparation.");
@@ -57,6 +65,19 @@ namespace BeyondTheBeat.Editor
 
             Phase4CookingBuilder.ValidateCookingInteractionOrThrow();
             AppendDiagnostic("Phase 4 cooking structural/behavior validation PASS.");
+        }
+
+        private static void PrepareRepairInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 4 vehicle repair CI preparation.");
+            AppendDiagnostic("Phase 4 vehicle repair preparation START.");
+
+            PrepareCookingInternal();
+            Phase4RepairBuilder.BuildVehicleRepairInteraction();
+            AppendDiagnostic("Phase 4 vehicle repair scene integration completed.");
+
+            Phase4RepairBuilder.ValidateVehicleRepairInteractionOrThrow();
+            AppendDiagnostic("Phase 4 vehicle repair structural/behavior validation PASS.");
         }
 
         private static void EnsurePhase4SceneAndSettings()
@@ -89,7 +110,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase4-cooking-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase4-repair-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -116,7 +137,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 4 cooking development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 4 vehicle repair development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -141,7 +162,7 @@ namespace BeyondTheBeat.Editor
             string stagedPath = StageApkInsideProject(outputPath);
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
-                "[Beyond The Beat] Phase 4 cooking Android APK build PASS. " +
+                "[Beyond The Beat] Phase 4 vehicle repair Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}. " +
                 "Physical Android acceptance is still required.");
