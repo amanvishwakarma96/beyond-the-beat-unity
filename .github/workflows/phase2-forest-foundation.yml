@@ -149,13 +149,19 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
 
-          Phase 3 acceptance priorities:
-          1. Existing LEFT/RIGHT/GO/REV/ACTION controls still work, including multitouch combinations.
-          2. Forest survival and existing Reach Location / Reach + Survive flows remain functional.
+          Phase 3 exit acceptance priorities:
+          1. LEFT/RIGHT/GO/REV/ACTION all work on-device, including steering + throttle/brake multitouch combinations.
+          2. Actual vehicle movement, steering and braking match the visible control state; ACTION does not block driving input.
           3. The restricted-area gate starts closed and physically blocks entry.
-          4. Moving sufficient physics weight onto the pressure plate unlocks and opens the gate.
-          5. Removing the weight resets the puzzle and relocks/closes the gate reliably.
-          6. Driving, parking, free roam, save/resume, HUD, and performance remain regression-safe.
+          4. The crate/pressure-plate physics interaction solves the puzzle and unlocks/opens the gate.
+          5. Puzzle reset/retry relocks/closes the gate without a stuck or duplicate objective state.
+          6. Reach + Solve HUD correctly shows PUZZLE/AREA progress for puzzle-first and area-first flows.
+          7. Completing both conditions shows Mission Complete and leaves free roam usable.
+          8. Save/relaunch preserves unsolved and solved puzzle/mission state; reset progress restores the new-game gate/puzzle state.
+          9. Forest survival, parking, camera, HUD and existing free-roam behavior remain regression-safe.
+          10. Record FPS/stutter/GC and thermal observations during an extended device session.
+
+          CI GREEN IS NOT DEVICE SIGN-OFF. Record physical Android evidence before formal Phase 3 closure.
           EOF
 
           {
@@ -187,5 +193,6 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build for the Phase 3 restricted-area milestone."
+            echo "This is the single current device-test build for the Phase 3 exit-validation milestone."
+            echo "CI green is not physical Android sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
