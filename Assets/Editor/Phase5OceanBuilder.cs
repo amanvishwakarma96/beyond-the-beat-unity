@@ -23,8 +23,10 @@ namespace BeyondTheBeat.Editor
         private const float SurfaceY = -0.25f;
         private const float MaxDepth = 12f;
 
-        private static readonly Vector3 OceanCenter = new Vector3(105f, SurfaceY, 55f);
-        private static readonly Vector3 OceanSize = new Vector3(100f, MaxDepth, 90f);
+        // Existing Forest content is centered around x=130,z=0 and Restricted content around x=205,z=0.
+        // Keep the first ocean north of those systems so Phase 5 does not rewrite or overlap earlier gameplay space.
+        private static readonly Vector3 OceanCenter = new Vector3(130f, SurfaceY, 150f);
+        private static readonly Vector3 OceanSize = new Vector3(140f, MaxDepth, 80f);
 
         [MenuItem("Beyond The Beat/Phase 5/Build Ocean Foundation")]
         public static void BuildOceanFoundation()
@@ -34,8 +36,7 @@ namespace BeyondTheBeat.Editor
                 return;
             }
 
-            SceneAsset phase4Scene = AssetDatabase.LoadAssetAtPath<SceneAsset>(Phase4CookingBuilder.Phase4ScenePath);
-            if (phase4Scene == null)
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Phase4CookingBuilder.Phase4ScenePath) == null)
             {
                 throw new InvalidOperationException(
                     $"Phase 5 ocean build requires the integrated Phase 4 scene at '{Phase4CookingBuilder.Phase4ScenePath}'.");
@@ -84,7 +85,7 @@ namespace BeyondTheBeat.Editor
             SceneView.lastActiveSceneView?.FrameSelected();
 
             Debug.Log(
-                "[Beyond The Beat] Phase 5 ocean foundation created. Ocean context/depth data is isolated from future swim controls and the prototype surface uses one static opaque mobile-friendly material with no reflection/refraction pass.");
+                "[Beyond The Beat] Phase 5 ocean foundation created north of the existing world. Water context/depth data is isolated from future swim controls and rendering uses one static opaque mobile-friendly material with no reflection/refraction pass.");
         }
 
         [MenuItem("Beyond The Beat/Phase 5/Validate Ocean Foundation")]
@@ -112,8 +113,7 @@ namespace BeyondTheBeat.Editor
 
         private static bool ValidateOceanFoundationInternal(out string message)
         {
-            SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(Phase5ScenePath);
-            if (sceneAsset == null)
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(Phase5ScenePath) == null)
             {
                 message = $"[Beyond The Beat] Phase 5 ocean validation FAIL: scene not found at '{Phase5ScenePath}'.";
                 return false;
@@ -169,27 +169,11 @@ namespace BeyondTheBeat.Editor
                     volumeCollider.isTrigger &&
                     Mathf.Approximately(waterVolume.SurfaceY, SurfaceY) &&
                     Mathf.Approximately(waterVolume.MaxDepth, MaxDepth) &&
+                    volumeTransform.position.z > 100f &&
                     surfaceTransform != null &&
                     shorelineTransform != null;
 
-                bool queryPass = false;
-                if (waterVolume != null)
-                {
-                    Vector3 center = volumeCollider.bounds.center;
-                    Vector3 belowSurface = new Vector3(center.x, SurfaceY - 3f, center.z);
-                    Vector3 aboveSurface = new Vector3(center.x, SurfaceY + 1f, center.z);
-                    Vector3 outside = new Vector3(volumeCollider.bounds.max.x + 5f, SurfaceY - 3f, center.z);
-                    Vector3 deep = new Vector3(center.x, SurfaceY - MaxDepth * 2f, center.z);
-
-                    queryPass =
-                        waterVolume.ContainsHorizontalPosition(belowSurface) &&
-                        Mathf.Approximately(waterVolume.GetDepthAt(belowSurface), 3f) &&
-                        Mathf.Approximately(waterVolume.GetDepthAt(aboveSurface), 0f) &&
-                        Mathf.Approximately(waterVolume.GetDepthAt(outside), 0f) &&
-                        Mathf.Approximately(waterVolume.GetDepthAt(deep), MaxDepth) &&
-                        Mathf.Approximately(waterVolume.GetNormalizedDepthAt(deep), 1f);
-                }
-
+                bool queryPass = ValidateWaterQueries(waterVolume, volumeCollider);
                 bool noPerFrameLoop = typeof(WaterVolume).GetMethod(
                     "Update",
                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) == null;
@@ -219,7 +203,7 @@ namespace BeyondTheBeat.Editor
                             mobileSurfacePass && inheritedPhase4Pass && buildSettingsPass;
 
                 message = pass
-                    ? "[Beyond The Beat] Phase 5 ocean foundation validation PASS: additive Ocean context, reusable depth queries, static mobile-friendly water surface, inherited Phase 4 gameplay and single-scene build contract are intact. Physical Android water-area validation remains required."
+                    ? "[Beyond The Beat] Phase 5 ocean foundation validation PASS: additive Ocean context, reusable depth queries, non-overlapping north-edge placement, static mobile-friendly water surface, inherited Phase 4 gameplay and single-scene build contract are intact. Physical Android water-area validation remains required."
                     : "[Beyond The Beat] Phase 5 ocean foundation validation FAIL: " +
                       $"enum={enumPass}, structure={structurePass}, queries={queryPass}, noUpdate={noPerFrameLoop}, " +
                       $"mobileSurface={mobileSurfacePass}, inheritedPhase4={inheritedPhase4Pass}, buildSettings={buildSettingsPass}.";
@@ -232,6 +216,27 @@ namespace BeyondTheBeat.Editor
                     EditorSceneManager.CloseScene(validationScene, true);
                 }
             }
+        }
+
+        private static bool ValidateWaterQueries(WaterVolume waterVolume, BoxCollider volumeCollider)
+        {
+            if (waterVolume == null || volumeCollider == null)
+            {
+                return false;
+            }
+
+            Vector3 center = volumeCollider.bounds.center;
+            Vector3 belowSurface = new Vector3(center.x, SurfaceY - 3f, center.z);
+            Vector3 aboveSurface = new Vector3(center.x, SurfaceY + 1f, center.z);
+            Vector3 outside = new Vector3(volumeCollider.bounds.max.x + 5f, SurfaceY - 3f, center.z);
+            Vector3 deep = new Vector3(center.x, SurfaceY - MaxDepth * 2f, center.z);
+
+            return waterVolume.ContainsHorizontalPosition(belowSurface) &&
+                   Mathf.Approximately(waterVolume.GetDepthAt(belowSurface), 3f) &&
+                   Mathf.Approximately(waterVolume.GetDepthAt(aboveSurface), 0f) &&
+                   Mathf.Approximately(waterVolume.GetDepthAt(outside), 0f) &&
+                   Mathf.Approximately(waterVolume.GetDepthAt(deep), MaxDepth) &&
+                   Mathf.Approximately(waterVolume.GetNormalizedDepthAt(deep), 1f);
         }
 
         private static WaterVolume CreateOceanVolume(Transform parent)
@@ -278,8 +283,7 @@ namespace BeyondTheBeat.Editor
                 UnityEngine.Object.DestroyImmediate(collider);
             }
 
-            Renderer renderer = surface.GetComponent<Renderer>();
-            renderer.sharedMaterial = CreateOrUpdateOceanMaterial();
+            surface.GetComponent<Renderer>().sharedMaterial = CreateOrUpdateOceanMaterial();
         }
 
         private static void CreateShoreline(Transform parent)
@@ -287,8 +291,8 @@ namespace BeyondTheBeat.Editor
             GameObject shore = GameObject.CreatePrimitive(PrimitiveType.Cube);
             shore.name = ShorelineName;
             shore.transform.SetParent(parent, false);
-            shore.transform.position = new Vector3(OceanCenter.x - OceanSize.x * 0.5f - 2f, SurfaceY + 0.15f, OceanCenter.z);
-            shore.transform.localScale = new Vector3(4f, 0.4f, OceanSize.z);
+            shore.transform.position = new Vector3(OceanCenter.x, SurfaceY + 0.15f, OceanCenter.z - OceanSize.z * 0.5f - 5f);
+            shore.transform.localScale = new Vector3(OceanSize.x, 0.4f, 10f);
         }
 
         private static Material CreateOrUpdateOceanMaterial()
