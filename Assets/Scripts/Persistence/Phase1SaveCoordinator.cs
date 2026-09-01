@@ -1,5 +1,9 @@
+using System;
+using System.Collections.Generic;
 using BeyondTheBeat.Missions;
+using BeyondTheBeat.Puzzles;
 using BeyondTheBeat.Survival;
+using BeyondTheBeat.World;
 using UnityEngine;
 
 namespace BeyondTheBeat.Persistence
@@ -8,10 +12,20 @@ namespace BeyondTheBeat.Persistence
     [DisallowMultipleComponent]
     public sealed class Phase1SaveCoordinator : MonoBehaviour
     {
+        private static readonly HashSet<string> CompatibleIntegratedSceneIds =
+            new HashSet<string>(StringComparer.Ordinal)
+            {
+                "Phase1_MVP",
+                "Phase2_Forest",
+                "Phase3_RestrictedArea"
+            };
+
         [SerializeField] private SaveManager saveManager;
         [SerializeField] private MissionManager missionManager;
         [SerializeField] private Transform vehicleTransform;
         [SerializeField] private ForestSurvivalController survivalController;
+        [SerializeField] private ZoneContext[] persistentZones = Array.Empty<ZoneContext>();
+        [SerializeField] private PuzzleStateController[] persistentPuzzles = Array.Empty<PuzzleStateController>();
         [SerializeField] private bool loadOnStart = true;
         [SerializeField] private bool saveOnApplicationPause = true;
         [SerializeField] private bool saveOnApplicationQuit = true;
@@ -25,6 +39,8 @@ namespace BeyondTheBeat.Persistence
         public MissionManager MissionManager => missionManager;
         public Transform VehicleTransform => vehicleTransform;
         public ForestSurvivalController SurvivalController => survivalController;
+        public int PersistentZoneCount => persistentZones != null ? persistentZones.Length : 0;
+        public int PersistentPuzzleCount => persistentPuzzles != null ? persistentPuzzles.Length : 0;
         public bool LoadOnStart => loadOnStart;
         public bool SaveOnApplicationPause => saveOnApplicationPause;
         public bool SaveOnApplicationQuit => saveOnApplicationQuit;
@@ -126,6 +142,9 @@ namespace BeyondTheBeat.Persistence
         {
             bool hasSurvivalState = survivalController != null && survivalController.Resource != null;
             MissionProgressSnapshot missionProgress = missionManager.Progress;
+            SavedPuzzleState[] puzzleStates = CapturePuzzleStates();
+            bool reachAndSolveActiveOrResolved = missionManager.CurrentMission != null &&
+                                                missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSolve;
 
             return new GameSaveData
             {
@@ -139,7 +158,11 @@ namespace BeyondTheBeat.Persistence
                 MissionSurvivalElapsedSeconds = hasSurvivalState ? missionProgress.SurvivalElapsedSeconds : 0f,
                 SurvivalResourceValue = hasSurvivalState ? survivalController.Resource.CurrentValue : 0f,
                 SurvivalPressureActive = hasSurvivalState && survivalController.IsPressureActive,
-                SurvivalRecovering = hasSurvivalState && survivalController.IsRecovering
+                SurvivalRecovering = hasSurvivalState && survivalController.IsRecovering,
+                HasPhase3PuzzleState = puzzleStates.Length > 0,
+                MissionReachAndSolveTargetContextActive =
+                    reachAndSolveActiveOrResolved && missionProgress.TargetContextActive,
+                Phase3PuzzleStates = puzzleStates
             };
         }
 
@@ -150,46 +173,133 @@ namespace BeyondTheBeat.Persistence
                 return false;
             }
 
-            if (!string.Equals(data.SceneId, gameObject.scene.name, System.StringComparison.Ordinal))
+            if (!IsCompatibleSceneId(data.SceneId))
             {
                 Debug.LogWarning(
-                    $"[Beyond The Beat] Save scene '{data.SceneId}' does not match active scene '{gameObject.scene.name}'.");
+                    $"[Beyond The Beat] Save scene '{data.SceneId}' is not compatible with active integrated scene '{gameObject.scene.name}'.");
                 return false;
             }
 
             ApplyVehicleTransform(data.VehicleTransform);
+
+            if (!RestorePuzzleStates(data))
+            {
+                return false;
+            }
 
             if (!missionManager.RestoreMissionState(data.MissionId, data.MissionState))
             {
                 return false;
             }
 
-            if (!data.HasPhase2SurvivalState)
+            if (data.HasPhase2SurvivalState)
+            {
+                if (survivalController == null || survivalController.Resource == null)
+                {
+                    Debug.LogWarning("[Beyond The Beat] Phase 2 save contains survival state but no survival controller is configured.");
+                    return false;
+                }
+
+                if (!survivalController.RestorePersistentState(
+                        data.SurvivalResourceValue,
+                        data.SurvivalPressureActive,
+                        data.SurvivalRecovering))
+                {
+                    return false;
+                }
+            }
+
+            if (data.MissionState != MissionState.Active || missionManager.CurrentMission == null)
             {
                 return true;
             }
 
-            if (survivalController == null || survivalController.Resource == null)
-            {
-                Debug.LogWarning("[Beyond The Beat] Phase 2 save contains survival state but no survival controller is configured.");
-                return false;
-            }
-
-            if (!survivalController.RestorePersistentState(
-                    data.SurvivalResourceValue,
-                    data.SurvivalPressureActive,
-                    data.SurvivalRecovering))
-            {
-                return false;
-            }
-
-            if (data.MissionState == MissionState.Active &&
-                missionManager.CurrentMission != null &&
-                missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
+            if (missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
             {
                 return missionManager.RestoreObjectiveProgress(
                     data.MissionTargetContextActive,
                     data.MissionSurvivalElapsedSeconds);
+            }
+
+            if (missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
+            {
+                return RestoreReachAndSolveProgress(data.MissionReachAndSolveTargetContextActive);
+            }
+
+            return true;
+        }
+
+        private bool RestoreReachAndSolveProgress(bool restoredTargetContextActive)
+        {
+            if (!restoredTargetContextActive)
+            {
+                return true;
+            }
+
+            MissionDefinition mission = missionManager.CurrentMission;
+            ZoneContext targetZone = mission != null ? FindPersistentZone(mission.TargetZoneId) : null;
+            if (targetZone == null || vehicleTransform == null)
+            {
+                Debug.LogWarning(
+                    "[Beyond The Beat] Reach + Solve resume could not resolve the saved target ZoneContext.");
+                return false;
+            }
+
+            return missionManager.TryProcessZoneEntry(targetZone, vehicleTransform.gameObject);
+        }
+
+        private SavedPuzzleState[] CapturePuzzleStates()
+        {
+            if (persistentPuzzles == null || persistentPuzzles.Length == 0)
+            {
+                return Array.Empty<SavedPuzzleState>();
+            }
+
+            List<SavedPuzzleState> states = new List<SavedPuzzleState>(persistentPuzzles.Length);
+            for (int i = 0; i < persistentPuzzles.Length; i++)
+            {
+                PuzzleStateController puzzle = persistentPuzzles[i];
+                if (puzzle == null || !puzzle.IsConfigured)
+                {
+                    continue;
+                }
+
+                states.Add(new SavedPuzzleState(puzzle.PuzzleId, puzzle.IsSolved));
+            }
+
+            return states.ToArray();
+        }
+
+        private bool RestorePuzzleStates(GameSaveData data)
+        {
+            ResetPuzzlesToConfiguredState();
+            if (!data.HasPhase3PuzzleState)
+            {
+                return true;
+            }
+
+            SavedPuzzleState[] savedStates = data.Phase3PuzzleStates;
+            if (savedStates == null)
+            {
+                Debug.LogWarning("[Beyond The Beat] Phase 3 save declared puzzle state but contained no puzzle snapshots.");
+                return false;
+            }
+
+            for (int i = 0; i < savedStates.Length; i++)
+            {
+                SavedPuzzleState saved = savedStates[i];
+                PuzzleStateController puzzle = FindPersistentPuzzle(saved.PuzzleId);
+                if (puzzle == null)
+                {
+                    Debug.LogWarning(
+                        $"[Beyond The Beat] Saved puzzle '{saved.PuzzleId}' is not available in the active Phase 3 scene.");
+                    return false;
+                }
+
+                if (!puzzle.RestorePersistentState(saved.IsSolved))
+                {
+                    return false;
+                }
             }
 
             return true;
@@ -203,6 +313,7 @@ namespace BeyondTheBeat.Persistence
             }
 
             survivalController?.ResetResource();
+            ResetPuzzlesToConfiguredState();
 
             if (missionManager == null)
             {
@@ -215,14 +326,71 @@ namespace BeyondTheBeat.Persistence
                 return;
             }
 
-            bool alreadyAtNewGameMission =
-                missionManager.State == MissionState.Active &&
-                missionManager.CurrentMissionId == newGameMission.MissionId;
+            missionManager.StartMission(newGameMission);
+        }
 
-            if (!alreadyAtNewGameMission)
+        private void ResetPuzzlesToConfiguredState()
+        {
+            if (persistentPuzzles == null)
             {
-                missionManager.StartMission(newGameMission);
+                return;
             }
+
+            for (int i = 0; i < persistentPuzzles.Length; i++)
+            {
+                persistentPuzzles[i]?.ResetToConfiguredStartState();
+            }
+        }
+
+        private ZoneContext FindPersistentZone(string zoneId)
+        {
+            if (persistentZones == null || string.IsNullOrWhiteSpace(zoneId))
+            {
+                return null;
+            }
+
+            for (int i = 0; i < persistentZones.Length; i++)
+            {
+                ZoneContext zone = persistentZones[i];
+                if (zone != null && string.Equals(zone.ZoneId, zoneId, StringComparison.Ordinal))
+                {
+                    return zone;
+                }
+            }
+
+            return null;
+        }
+
+        private PuzzleStateController FindPersistentPuzzle(string puzzleId)
+        {
+            if (persistentPuzzles == null || string.IsNullOrWhiteSpace(puzzleId))
+            {
+                return null;
+            }
+
+            for (int i = 0; i < persistentPuzzles.Length; i++)
+            {
+                PuzzleStateController puzzle = persistentPuzzles[i];
+                if (puzzle != null &&
+                    puzzle.IsConfigured &&
+                    string.Equals(puzzle.PuzzleId, puzzleId, StringComparison.Ordinal))
+                {
+                    return puzzle;
+                }
+            }
+
+            return null;
+        }
+
+        private bool IsCompatibleSceneId(string savedSceneId)
+        {
+            if (string.IsNullOrWhiteSpace(savedSceneId))
+            {
+                return false;
+            }
+
+            return string.Equals(savedSceneId, gameObject.scene.name, StringComparison.Ordinal) ||
+                   CompatibleIntegratedSceneIds.Contains(savedSceneId);
         }
 
         private void ApplyVehicleTransform(SavedTransform savedTransform)
