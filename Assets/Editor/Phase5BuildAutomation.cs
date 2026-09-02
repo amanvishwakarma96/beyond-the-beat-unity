@@ -23,10 +23,11 @@ namespace BeyondTheBeat.Editor
                 AppendDiagnostic(
                     $"BuildAndroid START. Unity={Application.unityVersion}, batchMode={Application.isBatchMode}, dataPath={Application.dataPath}");
 
-                PrepareOceanInternal();
+                PrepareSwimInternal();
                 EnsurePhase5SceneAndSettings();
                 BuildDevelopmentAndroidApk();
-                AppendDiagnostic("BuildAndroid PASS. Automated Phase 5 ocean foundation passed; physical Android water-area validation remains required.");
+                AppendDiagnostic(
+                    "BuildAndroid PASS. Automated Phase 5 ocean + swim/dive foundation passed; physical Android water-area validation and later mobile swim control/camera integration remain required.");
             }
             catch (Exception exception)
             {
@@ -44,6 +45,15 @@ namespace BeyondTheBeat.Editor
             AppendDiagnostic("PrepareOcean PASS. Physical Android water-area validation remains pending.");
         }
 
+        public static void PrepareSwim()
+        {
+            InitializeDiagnostics();
+            PrepareSwimInternal();
+            EnsurePhase5SceneAndSettings();
+            AppendDiagnostic(
+                "PrepareSwim PASS. Automated swim/dive controller validation passed; mobile control/camera handoff and physical Android validation remain pending.");
+        }
+
         private static void PrepareOceanInternal()
         {
             Debug.Log("[Beyond The Beat] Starting Phase 5 ocean foundation CI preparation.");
@@ -51,13 +61,29 @@ namespace BeyondTheBeat.Editor
 
             AppendDiagnostic("Rebuilding and validating the complete Phase 4 prerequisite scene.");
             Phase4BuildAutomation.PrepareExit();
-            AppendDiagnostic("Phase 4 FINAL exit prerequisite validation PASS (automated only; device sign-off remains separate).");
+            AppendDiagnostic(
+                "Phase 4 FINAL exit prerequisite validation PASS (automated only; physical device sign-off remains separate).");
 
             Phase5OceanBuilder.BuildOceanFoundation();
             AppendDiagnostic("Phase 5 ocean scene/context/material generation completed.");
 
             Phase5OceanBuilder.ValidateOceanFoundationOrThrow();
             AppendDiagnostic("Phase 5 ocean structural/query/mobile-surface validation PASS.");
+        }
+
+        private static void PrepareSwimInternal()
+        {
+            Debug.Log("[Beyond The Beat] Starting Phase 5 swim/dive controller CI preparation.");
+            AppendDiagnostic("Phase 5 swim/dive controller preparation START.");
+
+            PrepareOceanInternal();
+
+            Phase5SwimBuilder.BuildSwimDiveFoundation();
+            AppendDiagnostic("Phase 5 swim prototype/controller integration completed.");
+
+            Phase5SwimBuilder.ValidateSwimDiveFoundationOrThrow();
+            AppendDiagnostic(
+                "Phase 5 swim/dive Dry/Surface/Underwater state, movement target, depth clamp, exit/re-entry and inherited-regression validation PASS.");
         }
 
         private static void EnsurePhase5SceneAndSettings()
@@ -90,7 +116,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase5-ocean-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase5-swim-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -117,7 +143,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
-            Debug.Log($"[Beyond The Beat] Building Phase 5 ocean development APK: {outputPath}");
+            Debug.Log($"[Beyond The Beat] Building Phase 5 swim/dive development APK: {outputPath}");
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -141,10 +167,10 @@ namespace BeyondTheBeat.Editor
             string stagedPath = StageApkInsideProject(outputPath);
             AppendDiagnostic($"APK staging PASS. source={outputPath}, staged={stagedPath}");
             Debug.Log(
-                "[Beyond The Beat] Phase 5 ocean Android APK build PASS. " +
+                "[Beyond The Beat] Phase 5 swim/dive Android APK build PASS. " +
                 $"Output: {outputPath}, staged output: {stagedPath}, size: {summary.totalSize} bytes, " +
                 $"duration: {summary.totalTime}, warnings: {summary.totalWarnings}. " +
-                "Physical Android water-area acceptance remains required.");
+                "This remains a device-validation candidate; direct mobile swim control/camera handoff is the next integration slice.");
         }
 
         private static string StageApkInsideProject(string outputPath)
