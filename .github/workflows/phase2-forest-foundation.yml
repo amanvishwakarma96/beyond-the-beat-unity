@@ -1,35 +1,30 @@
-name: Fast Current Milestone Validation
+name: Current Android Test Build
 
 on:
-  pull_request:
+  workflow_dispatch:
+  push:
     branches:
       - main
-    paths:
-      - '.github/workflows/phase2-forest-foundation.yml'
-      - 'Assets/**'
-      - 'Packages/**'
-      - 'ProjectSettings/**'
-      - 'Docs/**'
 
 permissions:
   contents: read
 
 concurrency:
-  group: fast-current-validation-${{ github.ref }}
+  group: current-android-test-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate-current-milestone:
-    name: Fast Unity validation
+  build-current-test:
+    name: Build TEST THIS APK candidate
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 90
 
     env:
       UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
       UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
       UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
       UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
-      SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      SOURCE_SHA: ${{ github.sha }}
 
     steps:
       - name: Checkout repository
@@ -39,12 +34,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           if [[ -z "${UNITY_LICENSE:-}" && -z "${UNITY_SERIAL:-}" ]]; then
             echo "::error::Configure UNITY_LICENSE for Unity Personal, or UNITY_SERIAL for a paid Unity license."
             exit 1
           fi
-
           if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
             echo "::error::GameCI Unity Builder requires UNITY_EMAIL and UNITY_PASSWORD together with UNITY_LICENSE/UNITY_SERIAL."
             exit 1
@@ -54,12 +47,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: Library
-          key: Library-Android-Fast-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-${{ github.event.pull_request.head.sha || github.sha }}
+          key: Library-Android-Full-v2-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-${{ github.sha }}
           restore-keys: |
+            Library-Android-Full-v2-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
+            Library-Android-Fast-v2-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
+            Library-Android-Full-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
             Library-Android-Fast-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
             Library-CurrentAndroidTest-v5-
 
-      - name: Compile and run fast milestone contracts
+      - name: Generate, validate, and build current Android test APK
+        id: unity-build
         uses: game-ci/unity-builder@v5.0.0
         env:
           UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
@@ -69,23 +66,126 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase5FastValidation.Validate
-          buildsPath: build/fast-validation
+          buildMethod: BeyondTheBeat.Editor.Phase5BuildAutomation.BuildAndroid
+          buildName: BeyondTheBeat-TEST-${{ github.run_number }}
+          buildsPath: build
+          versioning: Custom
+          version: 0.5.${{ github.run_number }}
+          androidVersionCode: ${{ github.run_number }}
+          androidExportType: androidPackage
           allowDirtyBuild: true
 
-      - name: Write validation summary
-        if: success()
+      - name: Print current-build diagnostics
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Beyond The Beat current Android test diagnostics ==="
+          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase5-ci-diagnostics.log"
+          if [[ -f "${DIAGNOSTICS}" ]]; then
+            grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
+            echo "--- diagnostics tail ---"
+            tail -n 420 "${DIAGNOSTICS}"
+          else
+            echo "No Phase 5 current-build diagnostics file was produced."
+          fi
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FAILED-BUILD-DIAGNOSTICS-${{ github.run_number }}
+          path: |
+            build/phase5-ci-diagnostics.log
+            build/phase4-ci-diagnostics.log
+            build/phase3-ci-diagnostics.log
+            build/phase2-ci-diagnostics.log
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+      - name: Create TEST THIS BUILD manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED_APK="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name "${EXPECTED_APK}" -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
+          if [[ -z "${APK_PATH}" ]]; then
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
+          fi
+          if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
+            echo "::error::Unity completed without a discoverable current Android test APK."
+            find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
+            exit 1
+          fi
+
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/TestThisBuild"
+          rm -rf "${STAGE_DIR}"
+          mkdir -p "${STAGE_DIR}"
+          APK_FILE="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
+          STAGED_APK="${STAGE_DIR}/${APK_FILE}"
+          cp "${APK_PATH}" "${STAGED_APK}"
+
+          APK_SHA256="$(sha256sum "${STAGED_APK}" | awk '{print $1}')"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/{print $2; exit}' "${GITHUB_WORKSPACE}/ProjectSettings/ProjectVersion.txt")"
+          printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
+
+          cat > "${STAGE_DIR}/INSTALL-THIS-BUILD.txt" <<EOF
+          BEYOND THE BEAT — INSTALL THIS BUILD
+
+          APK: ${APK_FILE}
+          Artifact: TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}
+          Source commit: ${SOURCE_SHA}
+          SHA-256: ${APK_SHA256}
+          Unity: ${UNITY_VERSION}
+          Workflow: ${RUN_URL}
+
+          This is the ONLY APK intended for current device testing.
+          CI success is not physical Android sign-off.
+
+          Phase 5 MOBILE SWIM + CAMERA priorities:
+          1. Confirm normal startup driving controls LEFT/RIGHT/GO/REV/ACTION still work.
+          2. Tap SWIM TEST; driving controls must hide, swim controls must appear, and the existing gameplay camera must hand off to SwimPrototypeActor.
+          3. Validate LEFT/RIGHT + SWIM/BACK multitouch movement.
+          4. Validate DIVE reaches underwater target depth and SURFACE returns upward; SURFACE must safely win if both are pressed.
+          5. Confirm there is no second-camera flicker/conflict during drive -> swim -> drive transitions.
+          6. Tap DRIVE; vehicle controls and camera target must restore cleanly. Repeat the handoff multiple times.
+          7. Regression-check Parking, Cook, Repair, Mechanic Job, mission HUD/objectives, forest survival, restricted gate/puzzle and save/resume.
+          8. Record shoreline/ocean FPS, stutter/GC, thermal and battery observations with device model + Android version.
+          EOF
+
+          {
+            echo "artifact_name=TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}"
+            echo "apk_path=artifact/TestThisBuild/${APK_FILE}"
+            echo "sha256=${APK_SHA256}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Upload TEST THIS BUILD APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.manifest.outputs.artifact_name }}
+          path: |
+            artifact/TestThisBuild/BeyondTheBeat-TEST-${{ github.run_number }}.apk
+            artifact/TestThisBuild/INSTALL-THIS-BUILD.txt
+            artifact/TestThisBuild/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Write workflow summary
         shell: bash
         run: |
           {
-            echo "# Fast Current Milestone Validation"
+            echo "# INSTALL THIS APK"
             echo
+            echo "- Artifact: **${{ steps.manifest.outputs.artifact_name }}**"
+            echo "- APK: **${{ steps.manifest.outputs.apk_path }}**"
             echo "- Source commit: \`${SOURCE_SHA}\`"
-            echo "- Unity script compilation: **PASS**"
-            echo "- Android input backend guard: **PASS**"
-            echo "- Phase 5 swim/dive contract: **PASS**"
-            echo "- Historical Phase 0/1 scene rebuild: **NOT RUN**"
-            echo "- Android APK packaging: **NOT RUN in PR validation**"
+            echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "Use the manual **Current Android Test Build** workflow only when a device-test APK is required."
+            echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
+            echo "It performs full integrated generation, validation, Android Player build and APK packaging."
+            echo "Physical Android testing remains mandatory for milestone sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
