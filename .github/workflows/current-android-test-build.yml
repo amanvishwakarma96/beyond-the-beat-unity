@@ -1,0 +1,181 @@
+name: Current Android Test Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: current-android-test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-current-test:
+    name: Build TEST THIS APK candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+
+    env:
+      UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+      UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+      UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+      UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+      SOURCE_SHA: ${{ github.sha }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Unity license configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${UNITY_LICENSE:-}" && -z "${UNITY_SERIAL:-}" ]]; then
+            echo "::error::Configure UNITY_LICENSE for Unity Personal, or UNITY_SERIAL for a paid Unity license."
+            exit 1
+          fi
+
+          if [[ -z "${UNITY_EMAIL:-}" || -z "${UNITY_PASSWORD:-}" ]]; then
+            echo "::error::GameCI Unity Builder requires UNITY_EMAIL and UNITY_PASSWORD together with UNITY_LICENSE/UNITY_SERIAL."
+            exit 1
+          fi
+
+      - name: Restore incremental Unity Library
+        uses: actions/cache@v4
+        with:
+          path: Library
+          key: Library-Android-Full-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-${{ github.sha }}
+          restore-keys: |
+            Library-Android-Full-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
+            Library-Android-Fast-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
+            Library-CurrentAndroidTest-v5-
+
+      - name: Generate, validate, and build current Android test APK
+        id: unity-build
+        uses: game-ci/unity-builder@v5.0.0
+        env:
+          UNITY_LICENSE: ${{ env.UNITY_LICENSE }}
+          UNITY_EMAIL: ${{ env.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ env.UNITY_PASSWORD }}
+          UNITY_SERIAL: ${{ env.UNITY_SERIAL }}
+        with:
+          targetPlatform: Android
+          unityVersion: auto
+          buildMethod: BeyondTheBeat.Editor.Phase5BuildAutomation.BuildAndroid
+          buildName: BeyondTheBeat-TEST-${{ github.run_number }}
+          buildsPath: build
+          versioning: Custom
+          version: 0.5.${{ github.run_number }}
+          androidVersionCode: ${{ github.run_number }}
+          androidExportType: androidPackage
+          allowDirtyBuild: true
+
+      - name: Print current-build diagnostics
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Beyond The Beat current Android test diagnostics ==="
+          DIAGNOSTICS="${GITHUB_WORKSPACE}/build/phase5-ci-diagnostics.log"
+          if [[ -f "${DIAGNOSTICS}" ]]; then
+            grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
+            echo "--- diagnostics tail ---"
+            tail -n 420 "${DIAGNOSTICS}"
+          else
+            echo "No Phase 5 current-build diagnostics file was produced."
+          fi
+
+      - name: Upload diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FAILED-BUILD-DIAGNOSTICS-${{ github.run_number }}
+          path: |
+            build/phase5-ci-diagnostics.log
+            build/phase4-ci-diagnostics.log
+            build/phase3-ci-diagnostics.log
+            build/phase2-ci-diagnostics.log
+          if-no-files-found: warn
+          retention-days: 14
+          compression-level: 0
+
+      - name: Create TEST THIS BUILD manifest
+        id: manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          EXPECTED_APK="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
+          APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name "${EXPECTED_APK}" -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
+
+          if [[ -z "${APK_PATH}" ]]; then
+            APK_PATH="$(find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -not -path "${GITHUB_WORKSPACE}/artifact/*" -not -path "${GITHUB_WORKSPACE}/Library/*" -print -quit)"
+          fi
+
+          if [[ -z "${APK_PATH}" || ! -f "${APK_PATH}" ]]; then
+            echo "::error::Unity completed without a discoverable current Android test APK."
+            find "${GITHUB_WORKSPACE}" -type f -name '*.apk' -print || true
+            exit 1
+          fi
+
+          STAGE_DIR="${GITHUB_WORKSPACE}/artifact/TestThisBuild"
+          rm -rf "${STAGE_DIR}"
+          mkdir -p "${STAGE_DIR}"
+
+          APK_FILE="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
+          STAGED_APK="${STAGE_DIR}/${APK_FILE}"
+          cp "${APK_PATH}" "${STAGED_APK}"
+
+          APK_SHA256="$(sha256sum "${STAGED_APK}" | awk '{print $1}')"
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/{print $2; exit}' "${GITHUB_WORKSPACE}/ProjectSettings/ProjectVersion.txt")"
+
+          printf '%s  %s\n' "${APK_SHA256}" "${APK_FILE}" > "${STAGE_DIR}/SHA256SUMS.txt"
+
+          cat > "${STAGE_DIR}/INSTALL-THIS-BUILD.txt" <<EOF
+          BEYOND THE BEAT — INSTALL THIS BUILD
+
+          APK: ${APK_FILE}
+          Artifact: TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}
+          Source commit: ${SOURCE_SHA}
+          SHA-256: ${APK_SHA256}
+          Unity: ${UNITY_VERSION}
+          Workflow: ${RUN_URL}
+
+          This is the ONLY APK intended for current physical-device testing.
+          CI success is not physical Android sign-off.
+          EOF
+
+          {
+            echo "artifact_name=TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}"
+            echo "apk_path=artifact/TestThisBuild/${APK_FILE}"
+            echo "sha256=${APK_SHA256}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Upload TEST THIS BUILD APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.manifest.outputs.artifact_name }}
+          path: |
+            artifact/TestThisBuild/BeyondTheBeat-TEST-${{ github.run_number }}.apk
+            artifact/TestThisBuild/INSTALL-THIS-BUILD.txt
+            artifact/TestThisBuild/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+      - name: Write workflow summary
+        shell: bash
+        run: |
+          {
+            echo "# INSTALL THIS APK"
+            echo
+            echo "- Artifact: **${{ steps.manifest.outputs.artifact_name }}**"
+            echo "- APK: **${{ steps.manifest.outputs.apk_path }}**"
+            echo "- Source commit: \`${SOURCE_SHA}\`"
+            echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
+            echo
+            echo "This manual workflow performs the full integrated scene generation, validation, Android Player build and APK packaging."
+            echo "Physical Android testing remains mandatory for milestone sign-off."
+          } >> "${GITHUB_STEP_SUMMARY}"
