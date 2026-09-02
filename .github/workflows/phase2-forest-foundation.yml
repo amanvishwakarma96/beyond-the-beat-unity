@@ -150,17 +150,17 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
 
-          Phase 5 OCEAN FOUNDATION acceptance priorities:
+          Phase 5 SWIM/DIVE CONTROLLER FOUNDATION acceptance priorities:
           1. LEFT/RIGHT/GO/REV/ACTION and actual vehicle movement/steering/braking/reverse remain regression-safe on-device.
-          2. Reach the new ocean edge and confirm the ocean surface/shoreline renders consistently without blocking the existing camera or controls.
-          3. Check the ocean area for obvious flicker, missing material, excessive overdraw-looking artifacts, frame spikes or camera-copy/reflection artifacts; this milestone intentionally uses a static opaque low-cost surface.
-          4. Confirm the existing Parking, Cook, Repair and Mechanic Job loops remain usable in the same APK.
-          5. Confirm mechanic-job HUD/CREDITS, mission HUD, Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle and save/resume remain regression-safe.
-          6. Record FPS/stutter/GC observations before approaching the ocean, at the shoreline, while looking across the full water surface, and while returning to the existing free-roam area.
-          7. Record thermal/battery observations during an extended session and note device model + Android version.
-          8. No swimming/diving behavior is expected yet; this build validates only Ocean ZoneContext + WaterVolume data + mobile water rendering foundation.
+          2. Reach the ocean edge and confirm the Ocean ZoneContext/WaterVolume surface and shoreline still render consistently without camera/control regressions.
+          3. Confirm the lightweight SwimPrototypeActor is present in the ocean content and does not introduce a second active camera, lighting stack, input overlay, or obvious physics instability.
+          4. This milestone validates the SwimController contract in CI: Dry/Surface/Underwater state transitions, horizontal target velocity, bounded dive depth, surface return, gravity restore and re-entry. Direct touch swim control/camera handoff is intentionally NEXT and is not claimed as complete here.
+          5. Confirm existing Parking, Cook, Repair and Mechanic Job loops remain usable in the same APK.
+          6. Confirm mechanic-job HUD/CREDITS, mission HUD, Reach Location, Reach + Survive, Reach + Solve, forest survival, restricted gate/puzzle and save/resume remain regression-safe.
+          7. Record FPS/stutter/GC observations before the ocean, at the shoreline, while looking across the water surface, and during an extended water-area session.
+          8. Record thermal/battery observations and device model + Android version.
 
-          CI GREEN IS NOT DEVICE SIGN-OFF. Phase 4 physical evidence remains separate, and Phase 5 ocean performance/visual evidence is required before this milestone is formally accepted.
+          CI GREEN IS NOT DEVICE SIGN-OFF. Phase 4 physical evidence remains separate, and direct mobile swim controls/camera integration plus exploration mission are still later Phase 5 milestones.
           EOF
 
           {
@@ -192,6 +192,6 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This is the single current device-test build for the Phase 5 ocean foundation milestone."
-            echo "CI green is not physical Android sign-off."
+            echo "This is the single current device-test build for the Phase 5 swim/dive controller foundation milestone."
+            echo "CI green is not physical Android sign-off. Direct mobile swim control/camera handoff remains the next integration slice."
           } >> "${GITHUB_STEP_SUMMARY}"
