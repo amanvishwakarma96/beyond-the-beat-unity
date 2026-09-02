@@ -2,6 +2,9 @@ name: Current Android Test Build
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -145,6 +148,16 @@ jobs:
 
           This is the ONLY APK intended for current physical-device testing.
           CI success is not physical Android sign-off.
+
+          Phase 5 MOBILE SWIM + CAMERA priorities:
+          1. Confirm normal startup driving controls LEFT/RIGHT/GO/REV/ACTION still work.
+          2. Tap SWIM TEST; driving controls must hide, swim controls must appear, and the existing gameplay camera must hand off to SwimPrototypeActor.
+          3. Validate LEFT/RIGHT + SWIM/BACK multitouch movement.
+          4. Validate DIVE reaches underwater target depth and SURFACE returns upward; SURFACE must safely win if both are pressed.
+          5. Confirm there is no second-camera flicker/conflict during drive -> swim -> drive transitions.
+          6. Tap DRIVE; vehicle controls and camera target must restore cleanly. Repeat the handoff multiple times.
+          7. Regression-check Parking, Cook, Repair, Mechanic Job, mission HUD/objectives, forest survival, restricted gate/puzzle and save/resume.
+          8. Record shoreline/ocean FPS, stutter/GC, thermal and battery observations with device model + Android version.
           EOF
 
           {
@@ -176,6 +189,7 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
-            echo "This manual workflow performs the full integrated scene generation, validation, Android Player build and APK packaging."
+            echo "This workflow runs automatically after changes land on main and can also be started manually."
+            echo "It performs full integrated generation, validation, Android Player build and APK packaging."
             echo "Physical Android testing remains mandatory for milestone sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
