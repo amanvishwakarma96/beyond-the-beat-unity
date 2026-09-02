@@ -6,7 +6,7 @@ This slice integrates the existing `SwimController` with mobile touch input and 
 
 ## Automated PR validation
 
-`Fast Current Milestone Validation` must remain the automatic pull-request gate. It validates:
+`.github/workflows/fast-current-milestone-validation.yml` (`Fast Current Milestone Validation`) is the automatic pull-request gate. It validates:
 
 - Unity script compilation.
 - fail-closed Android Active Input Handling = Both guard.
@@ -21,7 +21,7 @@ The fast PR gate intentionally does not rebuild historical phase scenes and does
 
 ## Full integrated Android build
 
-`.github/workflows/current-android-test-build.yml` performs the expensive integrated generation/validation/build path. It is available manually and is also triggered automatically whenever changes are pushed to `main`, including PR merge commits.
+`.github/workflows/phase2-forest-foundation.yml` retains the historical single-APK contract used by older regression validators, but its displayed workflow is now `Current Android Test Build`. It performs the expensive integrated generation/validation/build path. It can be started manually and is also triggered automatically whenever changes are pushed to `main`, including PR merge commits.
 
 The integrated validator must confirm:
 
@@ -44,7 +44,7 @@ CI green is not device sign-off. On the automatically generated post-merge APK, 
 1. Start in normal driving mode; LEFT/RIGHT/GO/REV/ACTION still work.
 2. Tap `SWIM TEST`; driving controls hide and swim controls appear.
 3. The existing gameplay camera moves to the swim prototype without creating a second camera or visible camera conflict.
-4. LEFT/RIGHT rotate movement direction laterally as expected.
+4. LEFT/RIGHT change lateral swim movement as expected.
 5. SWIM moves forward and BACK moves backward.
 6. DIVE moves the swimmer to the configured underwater target depth.
 7. SURFACE returns the swimmer toward the surface and overrides DIVE if both are held.
