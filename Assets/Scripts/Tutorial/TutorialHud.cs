@@ -83,13 +83,9 @@ namespace BeyondTheBeat.Tutorial
         public void Refresh()
         {
             bool visible = controller != null && controller.IsActive && controller.CurrentStep != null;
-            if (panel != null && panel != gameObject)
+            if (panel != null)
             {
                 panel.SetActive(visible);
-            }
-            else if (panel == null)
-            {
-                gameObject.SetActive(visible);
             }
 
             if (!visible)
