@@ -57,6 +57,7 @@ jobs:
           restore-keys: |
             Library-Android-Fast-v2-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
             Library-Android-Fast-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
+            Library-Android-Full-v2-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
             Library-Android-Full-v1-${{ hashFiles('Packages/manifest.json', 'Packages/packages-lock.json', 'ProjectSettings/ProjectVersion.txt') }}-
             Library-CurrentAndroidTest-v5-
 
@@ -70,7 +71,7 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase5FastValidation.Validate
+          buildMethod: BeyondTheBeat.Editor.Phase5ExplorationFastValidation.Validate
           buildsPath: build/fast-validation
           allowDirtyBuild: true
 
@@ -87,6 +88,8 @@ jobs:
             echo "- Swim/dive physics contract: **PASS**"
             echo "- Mobile swim input contract: **PASS**"
             echo "- Drive/swim camera handoff contract: **PASS**"
+            echo "- Exploration mission/checkpoint contract: **PASS**"
+            echo "- Exploration HUD/save schema contract: **PASS**"
             echo "- Historical scene rebuild: **NOT RUN**"
             echo "- Android APK packaging: **NOT RUN in PR validation**"
             echo
