@@ -11,7 +11,9 @@ namespace BeyondTheBeat.Editor
     {
         public static void Validate()
         {
-            Phase5ExitFastValidation.Validate();
+            // Reuse the latest Phase 5 gameplay contracts, but do not rerun the historical
+            // Phase 5 workflow-name assertions after CI ownership has advanced to Phase 6.
+            Phase5ExplorationFastValidation.Validate();
 
             MobilePerformanceBudget budget = ScriptableObject.CreateInstance<MobilePerformanceBudget>();
             try
@@ -40,14 +42,14 @@ namespace BeyondTheBeat.Editor
                 bool overlayNoUpdate = typeof(PerformanceDiagnosticsOverlay).GetMethod(
                     "Update",
                     BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) == null;
-                bool monitorHasSingleSamplingLoop = typeof(MobilePerformanceMonitor).GetMethod(
+                bool monitorHasSamplingLoop = typeof(MobilePerformanceMonitor).GetMethod(
                     "Update",
                     BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.DeclaredOnly) != null;
 
-                if (!thresholdsPass || !overlayNoUpdate || !monitorHasSingleSamplingLoop)
+                if (!thresholdsPass || !overlayNoUpdate || !monitorHasSamplingLoop)
                 {
                     throw new InvalidOperationException(
-                        $"Phase 6 fast performance validation failed: thresholds={thresholdsPass}, overlayNoUpdate={overlayNoUpdate}, monitorUpdate={monitorHasSingleSamplingLoop}.");
+                        $"Phase 6 fast performance validation failed: thresholds={thresholdsPass}, overlayNoUpdate={overlayNoUpdate}, monitorUpdate={monitorHasSamplingLoop}.");
                 }
             }
             finally
@@ -56,7 +58,7 @@ namespace BeyondTheBeat.Editor
             }
 
             Debug.Log(
-                "[Beyond The Beat] FAST PR VALIDATION PASS: Phase 5 exit contracts plus Phase 6 30/60 FPS budget, frame-time/memory classification and sampled diagnostics architecture passed without scene regeneration or APK packaging.");
+                "[Beyond The Beat] FAST PR VALIDATION PASS: Phase 5 gameplay contracts plus Phase 6 30/60 FPS budget, frame-time/memory classification and sampled diagnostics architecture passed without scene regeneration or APK packaging.");
         }
 
         private static void SetInt(SerializedObject serialized, string propertyName, int value)
