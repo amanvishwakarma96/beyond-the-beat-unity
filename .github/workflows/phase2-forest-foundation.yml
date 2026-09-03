@@ -82,11 +82,11 @@ jobs:
           echo "=== Beyond The Beat current Android test diagnostics ==="
           for DIAGNOSTICS in \
             "${GITHUB_WORKSPACE}/build/phase6-ci-diagnostics.log" \
+            "${GITHUB_WORKSPACE}/build/phase6-build-size-report.txt" \
             "${GITHUB_WORKSPACE}/build/phase5-ci-diagnostics.log"; do
             if [[ -f "${DIAGNOSTICS}" ]]; then
               echo "--- ${DIAGNOSTICS} ---"
-              grep -E '\[Beyond The Beat\]|Exception|BuildResult|FAIL|PASS' "${DIAGNOSTICS}" || true
-              tail -n 260 "${DIAGNOSTICS}"
+              cat "${DIAGNOSTICS}" | tail -n 320
             fi
           done
 
@@ -97,6 +97,7 @@ jobs:
           name: FAILED-BUILD-DIAGNOSTICS-${{ github.run_number }}
           path: |
             build/phase6-ci-diagnostics.log
+            build/phase6-build-size-report.txt
             build/phase5-ci-diagnostics.log
             build/phase4-ci-diagnostics.log
             build/phase3-ci-diagnostics.log
@@ -122,12 +123,19 @@ jobs:
             exit 1
           fi
 
+          SIZE_REPORT="${GITHUB_WORKSPACE}/build/phase6-build-size-report.txt"
+          if [[ ! -f "${SIZE_REPORT}" ]]; then
+            echo "::error::Phase 6 build-size report was not generated."
+            exit 1
+          fi
+
           STAGE_DIR="${GITHUB_WORKSPACE}/artifact/TestThisBuild"
           rm -rf "${STAGE_DIR}"
           mkdir -p "${STAGE_DIR}"
           APK_FILE="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
+          cp "${SIZE_REPORT}" "${STAGE_DIR}/BUILD-SIZE-REPORT.txt"
 
           BUDGET_ASSET="${GITHUB_WORKSPACE}/Assets/Settings/Performance/Phase6_MobilePerformanceBudget.asset"
           if [[ ! -f "${BUDGET_ASSET}" ]]; then
@@ -148,6 +156,10 @@ jobs:
             exit 1
           fi
 
+          BUILD_REPORT_MB="$(awk -F= '/^totalMiB=/{print $2; exit}' "${SIZE_REPORT}")"
+          MANAGED_STRIPPING="$(awk -F= '/^managedStripping=/{print $2; exit}' "${SIZE_REPORT}")"
+          ANDROID_ARCHS="$(awk -F= '/^androidArchitectures=/{print $2; exit}' "${SIZE_REPORT}")"
+
           APK_SHA256="$(sha256sum "${STAGED_APK}" | awk '{print $1}')"
           RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
           UNITY_VERSION="$(awk -F': ' '/^m_EditorVersion:/{print $2; exit}' "${GITHUB_WORKSPACE}/ProjectSettings/ProjectVersion.txt")"
@@ -161,23 +173,26 @@ jobs:
           Source commit: ${SOURCE_SHA}
           SHA-256: ${APK_SHA256}
           APK size: ${APK_MB} MB / ${MAX_APK_MB} MB ceiling
+          Unity BuildReport size: ${BUILD_REPORT_MB:-unknown} MiB
+          Managed stripping: ${MANAGED_STRIPPING:-unknown}
+          Android architectures: ${ANDROID_ARCHS:-unknown}
           Unity: ${UNITY_VERSION}
           Workflow: ${RUN_URL}
 
           This is the ONLY APK intended for current device testing.
           CI success is not physical Android sign-off.
 
-          Phase 6 MOBILE QUALITY OPTIMIZATION priorities:
-          1. Confirm startup driving LEFT/RIGHT/GO/REV/ACTION and all Phase 5 swim/exploration flows still work.
-          2. Confirm the development performance overlay remains visible and never consumes touch input.
-          3. Record FPS / frame-ms / allocated-memory while driving, forest, restricted area, shoreline, surface swim, underwater and exploration traversal.
-          4. Compare readings with the previous Phase 6 performance-foundation build when available; baseline target remains 30 FPS and frame-time warning remains 37 ms.
-          5. Check visual regressions from the mobile profile: shadow popping, hard-shadow readability, road/world aliasing, Ocean brightness/readability and Cove/Reef/Wreck marker visibility.
-          6. Verify DRIVE -> SWIM TEST -> DRIVE camera handoff has no exposure/brightness jump with gameplay HDR disabled.
-          7. Regression-check Parking, Cook, Repair, Mechanic Job, prior mission types, survival, puzzle/gate and save/relaunch.
-          8. Run at least one 15-minute session and record device model, Android version, thermal/throttling observations and battery drop.
-          9. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
-          10. CI GREEN IS NOT DEVICE PERFORMANCE SIGN-OFF: physical FPS/visual/thermal evidence is required before accepting the optimization.
+          Phase 6 BUILD SIZE / STRIPPING priorities:
+          1. Install and cold-launch the APK first; stripping bugs can appear only at runtime even when CI/build succeeds.
+          2. Confirm no missing-script/type initialization exceptions and no blank/broken startup UI.
+          3. Confirm LEFT/RIGHT/GO/REV/ACTION, DRIVE -> SWIM TEST -> DRIVE, DIVE/SURFACE and camera handoff still work.
+          4. Complete Exploration 0/3 -> 3/3 and verify save/relaunch restore still works after managed/engine stripping.
+          5. Regression-check Parking, Cook, Repair, Mechanic Job, survival and restricted puzzle/gate flow.
+          6. Confirm the development performance overlay still samples; compare startup/load time and FPS/frame-time with the prior Phase 6 quality build.
+          7. Review BUILD-SIZE-REPORT.txt for the largest generated build files before introducing real art/audio payload.
+          8. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
+          9. Record device model, Android version, install result and any runtime stripping-related failure.
+          10. CI GREEN IS NOT DEVICE BUILD-SIZE SIGN-OFF: physical install/launch/regression evidence is mandatory.
           EOF
 
           {
@@ -186,6 +201,8 @@ jobs:
             echo "sha256=${APK_SHA256}"
             echo "apk_size_mb=${APK_MB}"
             echo "apk_limit_mb=${MAX_APK_MB}"
+            echo "build_report_mb=${BUILD_REPORT_MB:-unknown}"
+            echo "managed_stripping=${MANAGED_STRIPPING:-unknown}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Upload TEST THIS BUILD APK
@@ -196,6 +213,7 @@ jobs:
             artifact/TestThisBuild/BeyondTheBeat-TEST-${{ github.run_number }}.apk
             artifact/TestThisBuild/INSTALL-THIS-BUILD.txt
             artifact/TestThisBuild/SHA256SUMS.txt
+            artifact/TestThisBuild/BUILD-SIZE-REPORT.txt
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -211,8 +229,10 @@ jobs:
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo "- APK size: **${{ steps.manifest.outputs.apk_size_mb }} MB / ${{ steps.manifest.outputs.apk_limit_mb }} MB**"
+            echo "- Unity BuildReport size: **${{ steps.manifest.outputs.build_report_mb }} MiB**"
+            echo "- Managed stripping: **${{ steps.manifest.outputs.managed_stripping }}**"
             echo
             echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
-            echo "It performs full integrated Phase 5 regression, Phase 6 performance + mobile-quality validation, Android Player build and APK size enforcement."
-            echo "Physical Android FPS/visual/thermal/battery testing remains mandatory for Phase 6 sign-off."
+            echo "It performs Phase 5 regression, Phase 6 performance + quality + stripping/build-size optimization, Android Player build and the 200 MB APK gate."
+            echo "Physical install/launch/regression testing remains mandatory because managed/engine stripping can fail only at runtime."
           } >> "${GITHUB_STEP_SUMMARY}"
