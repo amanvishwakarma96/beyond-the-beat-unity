@@ -182,17 +182,18 @@ jobs:
           This is the ONLY APK intended for current device testing.
           CI success is not physical Android sign-off.
 
-          Phase 6 BUILD SIZE / STRIPPING priorities:
-          1. Install and cold-launch the APK first; stripping bugs can appear only at runtime even when CI/build succeeds.
-          2. Confirm no missing-script/type initialization exceptions and no blank/broken startup UI.
-          3. Confirm LEFT/RIGHT/GO/REV/ACTION, DRIVE -> SWIM TEST -> DRIVE, DIVE/SURFACE and camera handoff still work.
-          4. Complete Exploration 0/3 -> 3/3 and verify save/relaunch restore still works after managed/engine stripping.
-          5. Regression-check Parking, Cook, Repair, Mechanic Job, survival and restricted puzzle/gate flow.
-          6. Confirm the development performance overlay still samples; compare startup/load time and FPS/frame-time with the prior Phase 6 quality build.
-          7. Review BUILD-SIZE-REPORT.txt for the largest generated build files before introducing real art/audio payload.
-          8. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
-          9. Record device model, Android version, install result and any runtime stripping-related failure.
-          10. CI GREEN IS NOT DEVICE BUILD-SIZE SIGN-OFF: physical install/launch/regression evidence is mandatory.
+          Phase 6 ONBOARDING + BUILD SIZE priorities:
+          1. Clean-install and cold-launch the APK; verify the tutorial appears on first launch and no stripping/missing-script startup failure occurs.
+          2. Complete Steer -> GO -> REV -> ACTION using real touch controls; confirm the tutorial panel never blocks LEFT/RIGHT/GO/REV/ACTION input.
+          3. Reinstall or clear app data and verify SKIP works; relaunch after complete/skip and confirm onboarding stays suppressed.
+          4. Confirm LEFT/RIGHT/GO/REV/ACTION, DRIVE -> SWIM TEST -> DRIVE, DIVE/SURFACE and camera handoff still work after onboarding.
+          5. Complete Exploration 0/3 -> 3/3 and verify save/relaunch restore still works after managed/engine stripping.
+          6. Regression-check Parking, Cook, Repair, Mechanic Job, survival and restricted puzzle/gate flow.
+          7. Confirm the development performance overlay still samples; compare startup/load time and FPS/frame-time with the prior Phase 6 quality build.
+          8. Review BUILD-SIZE-REPORT.txt for the largest generated build files before introducing real art/audio payload.
+          9. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
+          10. Record device model, Android version, tutorial readability/safe-area fit, install result and any runtime stripping-related failure.
+          11. CI GREEN IS NOT DEVICE ONBOARDING OR BUILD-SIZE SIGN-OFF: physical first-launch/touch/install/regression evidence is mandatory.
           EOF
 
           {
@@ -233,6 +234,6 @@ jobs:
             echo "- Managed stripping: **${{ steps.manifest.outputs.managed_stripping }}**"
             echo
             echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
-            echo "It performs Phase 5 regression, Phase 6 performance + quality + stripping/build-size optimization, Android Player build and the 200 MB APK gate."
-            echo "Physical install/launch/regression testing remains mandatory because managed/engine stripping can fail only at runtime."
+            echo "It performs Phase 5 regression, Phase 6 performance + quality + tutorial/onboarding + stripping/build-size optimization, Android Player build and the 200 MB APK gate."
+            echo "Physical first-launch/onboarding/touch/install/regression testing remains mandatory because CI cannot prove device ergonomics and managed/engine stripping can fail only at runtime."
           } >> "${GITHUB_STEP_SUMMARY}"
