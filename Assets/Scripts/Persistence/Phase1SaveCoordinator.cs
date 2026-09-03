@@ -17,7 +17,9 @@ namespace BeyondTheBeat.Persistence
             {
                 "Phase1_MVP",
                 "Phase2_Forest",
-                "Phase3_RestrictedArea"
+                "Phase3_RestrictedArea",
+                "Phase4_Cooking",
+                "Phase5_Ocean"
             };
 
         [SerializeField] private SaveManager saveManager;
@@ -145,6 +147,11 @@ namespace BeyondTheBeat.Persistence
             SavedPuzzleState[] puzzleStates = CapturePuzzleStates();
             bool reachAndSolveActiveOrResolved = missionManager.CurrentMission != null &&
                                                 missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSolve;
+            bool explorationActiveOrResolved = missionManager.CurrentMission != null &&
+                                               missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ExploreLocations;
+            string[] explorationZoneIds = explorationActiveOrResolved
+                ? missionManager.GetVisitedExplorationZoneIds()
+                : Array.Empty<string>();
 
             return new GameSaveData
             {
@@ -162,7 +169,9 @@ namespace BeyondTheBeat.Persistence
                 HasPhase3PuzzleState = puzzleStates.Length > 0,
                 MissionReachAndSolveTargetContextActive =
                     reachAndSolveActiveOrResolved && missionProgress.TargetContextActive,
-                Phase3PuzzleStates = puzzleStates
+                Phase3PuzzleStates = puzzleStates,
+                HasPhase5ExplorationState = explorationActiveOrResolved,
+                MissionVisitedExplorationZoneIds = explorationZoneIds
             };
         }
 
@@ -224,6 +233,12 @@ namespace BeyondTheBeat.Persistence
             if (missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
             {
                 return RestoreReachAndSolveProgress(data.MissionReachAndSolveTargetContextActive);
+            }
+
+            if (missionManager.CurrentMission.ObjectiveType == MissionObjectiveType.ExploreLocations)
+            {
+                return !data.HasPhase5ExplorationState ||
+                       missionManager.RestoreExplorationProgress(data.MissionVisitedExplorationZoneIds);
             }
 
             return true;
