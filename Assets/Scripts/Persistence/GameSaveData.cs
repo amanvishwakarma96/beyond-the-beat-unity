@@ -96,5 +96,10 @@ namespace BeyondTheBeat.Persistence
         public bool HasPhase3PuzzleState;
         public bool MissionReachAndSolveTargetContextActive;
         public SavedPuzzleState[] Phase3PuzzleStates = Array.Empty<SavedPuzzleState>();
+
+        // Additive Phase 5 exploration fields. Older saves deserialize with HasPhase5ExplorationState=false
+        // and an empty checkpoint array; existing mission types are unaffected.
+        public bool HasPhase5ExplorationState;
+        public string[] MissionVisitedExplorationZoneIds = Array.Empty<string>();
     }
 }
