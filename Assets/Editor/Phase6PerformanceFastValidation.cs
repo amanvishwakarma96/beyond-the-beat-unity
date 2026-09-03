@@ -20,6 +20,7 @@ namespace BeyondTheBeat.Editor
             // Phase 5 workflow-name assertions after CI ownership has advanced to Phase 6.
             Phase5ExplorationFastValidation.Validate();
             Phase6MobileQualityFastValidation.ValidateQualityOnly();
+            Phase6BuildSizeFastValidation.ValidateBuildSizeOnly();
 
             MobilePerformanceBudget budget = ScriptableObject.CreateInstance<MobilePerformanceBudget>();
             try
@@ -65,7 +66,7 @@ namespace BeyondTheBeat.Editor
             }
 
             Debug.Log(
-                "[Beyond The Beat] FAST PR VALIDATION PASS: Phase 5 gameplay contracts plus Phase 6 performance budget, sampled diagnostics, mobile render-quality profile, current fast/full workflow ownership, automatic main build and 200 MB package gate passed without scene regeneration or APK packaging.");
+                "[Beyond The Beat] FAST PR VALIDATION PASS: Phase 5 gameplay plus Phase 6 performance, render-quality and build-size/stripping contracts passed without scene regeneration or APK packaging.");
         }
 
         private static bool ValidateRepositoryContracts()
