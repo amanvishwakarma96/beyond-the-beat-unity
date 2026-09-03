@@ -33,10 +33,14 @@ namespace BeyondTheBeat.Editor
                 Phase6PerformanceBuilder.ValidatePerformanceFoundationOrThrow();
                 AppendDiagnostic("Phase 6 performance budget/monitor/overlay validation PASS.");
 
+                Phase6MobileQualityBuilder.BuildMobileQualityOptimization();
+                Phase6MobileQualityBuilder.ValidateMobileQualityOptimizationOrThrow();
+                AppendDiagnostic("Phase 6 mobile render-quality optimization validation PASS.");
+
                 EnsureSceneBuildSettings();
                 BuildDevelopmentAndroidApk();
                 AppendDiagnostic(
-                    "BuildAndroid PASS. Phase 6 performance foundation is packaged; physical device FPS/thermal/battery validation remains required.");
+                    "BuildAndroid PASS. Phase 6 performance + mobile render-quality optimization is packaged; physical device FPS/thermal/battery validation remains required.");
             }
             catch (Exception exception)
             {
@@ -65,7 +69,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase6-performance-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase6-quality-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
