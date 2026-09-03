@@ -19,11 +19,15 @@ namespace BeyondTheBeat.Editor
                 InputBackendBuildGuard.EnsureBothInputBackends();
                 AppendDiagnostic("Android input backend guard PASS.");
 
+                // Rebuild and validate the latest Phase 5 gameplay slice without re-running the
+                // historical Phase 5 workflow-name assertions after CI ownership advances to Phase 6.
                 Phase5BuildAutomation.PrepareMobileSwim();
                 Phase5ExplorationMissionBuilder.BuildExplorationMission();
                 Phase5ExplorationMissionBuilder.ValidateExplorationMissionOrThrow();
-                Phase5ExitBuilder.ValidateFinalExitIntegrationOrThrow();
-                AppendDiagnostic("Phase 5 final exit prerequisite validation PASS (automated only).");
+                Phase5OceanBuilder.ValidateOceanFoundationOrThrow();
+                Phase5SwimBuilder.ValidateSwimDiveFoundationOrThrow();
+                Phase5MobileSwimBuilder.ValidateMobileSwimCameraIntegrationOrThrow();
+                AppendDiagnostic("Phase 5 Ocean/Swim/Camera/Exploration prerequisite validators PASS (automated only).");
 
                 Phase6PerformanceBuilder.BuildPerformanceFoundation();
                 Phase6PerformanceBuilder.ValidatePerformanceFoundationOrThrow();
