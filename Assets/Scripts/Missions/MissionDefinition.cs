@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BeyondTheBeat.Missions
@@ -7,7 +8,8 @@ namespace BeyondTheBeat.Missions
     {
         ReachLocation = 0,
         ReachAndSurvive = 1,
-        ReachAndSolve = 2
+        ReachAndSolve = 2,
+        ExploreLocations = 3
     }
 
     [CreateAssetMenu(
@@ -22,6 +24,7 @@ namespace BeyondTheBeat.Missions
         [SerializeField] private string targetZoneId = string.Empty;
         [SerializeField, Min(0f)] private float survivalDurationSeconds;
         [SerializeField] private string targetPuzzleId = string.Empty;
+        [SerializeField] private string[] explorationZoneIds = Array.Empty<string>();
 
         public string MissionId => missionId;
         public string DisplayName => displayName;
@@ -30,6 +33,8 @@ namespace BeyondTheBeat.Missions
         public string TargetZoneId => targetZoneId;
         public float SurvivalDurationSeconds => survivalDurationSeconds;
         public string TargetPuzzleId => targetPuzzleId;
+        public IReadOnlyList<string> ExplorationZoneIds => explorationZoneIds ?? Array.Empty<string>();
+        public int ExplorationZoneCount => explorationZoneIds != null ? explorationZoneIds.Length : 0;
 
         public bool IsConfigured
         {
@@ -49,10 +54,52 @@ namespace BeyondTheBeat.Missions
                     case MissionObjectiveType.ReachAndSolve:
                         return !string.IsNullOrWhiteSpace(targetZoneId) &&
                                !string.IsNullOrWhiteSpace(targetPuzzleId);
+                    case MissionObjectiveType.ExploreLocations:
+                        return HasValidExplorationZones();
                     default:
                         return false;
                 }
             }
+        }
+
+        public bool IsExplorationZone(string zoneId)
+        {
+            if (objectiveType != MissionObjectiveType.ExploreLocations ||
+                string.IsNullOrWhiteSpace(zoneId) ||
+                explorationZoneIds == null)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < explorationZoneIds.Length; i++)
+            {
+                if (string.Equals(explorationZoneIds[i], zoneId, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool HasValidExplorationZones()
+        {
+            if (explorationZoneIds == null || explorationZoneIds.Length == 0)
+            {
+                return false;
+            }
+
+            HashSet<string> unique = new HashSet<string>(StringComparer.Ordinal);
+            for (int i = 0; i < explorationZoneIds.Length; i++)
+            {
+                string zoneId = explorationZoneIds[i];
+                if (string.IsNullOrWhiteSpace(zoneId) || !unique.Add(zoneId))
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }
