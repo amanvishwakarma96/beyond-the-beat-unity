@@ -25,6 +25,7 @@ namespace BeyondTheBeat.Editor
             Debug.Log(
                 "[Beyond The Beat] Phase 6 Android build-size optimization prepared: engine stripping ON, " +
                 $"managed stripping {profile.ManagedStripping}, LZ4HC={profile.UseLz4HcCompression}, " +
+                $"backend={PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android)}, " +
                 $"architectures preserved as {PlayerSettings.Android.targetArchitectures}.");
         }
 
@@ -88,9 +89,18 @@ namespace BeyondTheBeat.Editor
             }
 
             BuildSummary summary = report.summary;
-            var largestFiles = report.files
+            BuildFile[] buildFiles = report.GetFiles();
+            BuildFile[] largestFiles = buildFiles
                 .Where(file => file.size > 0)
                 .OrderByDescending(file => file.size)
+                .Take(profile.BuildReportTopFileCount)
+                .ToArray();
+
+            var largestPackedAssets = report.packedAssets
+                .Where(group => group != null)
+                .SelectMany(group => group.contents)
+                .Where(info => info.packedSize > 0)
+                .OrderByDescending(info => info.packedSize)
                 .Take(profile.BuildReportTopFileCount)
                 .ToArray();
 
@@ -100,6 +110,7 @@ namespace BeyondTheBeat.Editor
             writer.WriteLine($"totalBytes={summary.totalSize}");
             writer.WriteLine($"totalMiB={summary.totalSize / 1048576d:F2}");
             writer.WriteLine($"duration={summary.totalTime}");
+            writer.WriteLine($"scriptingBackend={PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android)}");
             writer.WriteLine($"stripEngineCode={PlayerSettings.stripEngineCode}");
             writer.WriteLine($"managedStripping={PlayerSettings.GetManagedStrippingLevel(BuildTargetGroup.Android)}");
             writer.WriteLine($"androidArchitectures={PlayerSettings.Android.targetArchitectures}");
@@ -110,6 +121,14 @@ namespace BeyondTheBeat.Editor
             {
                 BuildFile file = largestFiles[i];
                 writer.WriteLine($"{i + 1}. {file.size} bytes | {file.path}");
+            }
+
+            writer.WriteLine("largestPackedAssets:");
+            for (int i = 0; i < largestPackedAssets.Length; i++)
+            {
+                PackedAssetInfo info = largestPackedAssets[i];
+                string source = string.IsNullOrWhiteSpace(info.sourceAssetPath) ? "<generated>" : info.sourceAssetPath;
+                writer.WriteLine($"{i + 1}. {info.packedSize} bytes | {info.type} | {source}");
             }
 
             Debug.Log($"[Beyond The Beat] Phase 6 build-size report written to '{ReportRelativePath}'.");
@@ -132,7 +151,7 @@ namespace BeyondTheBeat.Editor
 
             bool pass = profilePass && strippingPass && compressionPass;
             message = pass
-                ? "[Beyond The Beat] Phase 6 build-size optimization validation PASS: engine stripping, conservative managed stripping, LZ4HC compression and architecture-preservation policy are configured. Physical install/launch validation remains required for stripping safety."
+                ? "[Beyond The Beat] Phase 6 build-size optimization validation PASS: engine-strip policy, conservative managed stripping, LZ4HC compression and architecture-preservation policy are configured. Engine-code stripping only reduces native code when the preserved backend is IL2CPP. Physical install/launch validation remains required for stripping safety."
                 : "[Beyond The Beat] Phase 6 build-size optimization validation FAIL: " +
                   $"profile={profilePass}, stripping={strippingPass}, compression={compressionPass}, " +
                   $"actualManaged={PlayerSettings.GetManagedStrippingLevel(BuildTargetGroup.Android)}, expectedManaged={expected}.";
@@ -166,7 +185,9 @@ namespace BeyondTheBeat.Editor
                 throw new InvalidOperationException("Phase 6 build optimization profile is not configured.");
             }
 
+            ScriptingImplementation scriptingBackendBefore = PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android);
             AndroidArchitecture architecturesBefore = PlayerSettings.Android.targetArchitectures;
+
             PlayerSettings.stripEngineCode = profile.StripEngineCode;
             PlayerSettings.SetManagedStrippingLevel(BuildTargetGroup.Android, MapManagedStripping(profile.ManagedStripping));
 
@@ -174,6 +195,11 @@ namespace BeyondTheBeat.Editor
                 PlayerSettings.Android.targetArchitectures != architecturesBefore)
             {
                 PlayerSettings.Android.targetArchitectures = architecturesBefore;
+            }
+
+            if (PlayerSettings.GetScriptingBackend(BuildTargetGroup.Android) != scriptingBackendBefore)
+            {
+                throw new InvalidOperationException("Phase 6 build optimization must not change the Android scripting backend.");
             }
         }
 
