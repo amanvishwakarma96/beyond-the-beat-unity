@@ -19,10 +19,11 @@ namespace BeyondTheBeat.Editor
             InputBackendBuildGuard.EnsureBothInputBackends();
             ValidateArchitectureOrThrow();
             ValidateBehaviorOrThrow();
+            Phase5MobileSwimFastValidation.ValidateOrThrow();
 
             Debug.Log(
                 "[Beyond The Beat] FAST PR VALIDATION PASS: scripts compiled, Android input backend guard passed, " +
-                "and the Phase 5 swim/dive controller contract passed without rebuilding prior phase scenes or packaging an APK.");
+                "swim/dive physics passed, and mobile swim input + drive/swim camera handoff contracts passed without rebuilding prior phase scenes or packaging an APK.");
         }
 
         private static void ValidateArchitectureOrThrow()
