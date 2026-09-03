@@ -145,16 +145,17 @@ jobs:
           This is the ONLY APK intended for current device testing.
           CI success is not physical Android sign-off.
 
-          Phase 5 EXPLORATION MISSION priorities:
-          1. Confirm normal startup driving controls LEFT/RIGHT/GO/REV/ACTION still work.
-          2. Tap SWIM TEST and confirm the existing gameplay camera hands off to SwimPrototypeActor with swim controls visible.
-          3. Verify the mission HUD shows Explore the Northern Ocean with 0/3 checkpoint progress.
-          4. Swim through the Cove, Reef and Wreck marker volumes in any order; each unique checkpoint must increment progress once.
-          5. Re-enter an already visited checkpoint and confirm progress does not double-count.
-          6. Complete all three checkpoints and confirm MISSION COMPLETE while free roam remains available.
-          7. Before completion, relaunch from a save after one/two checkpoints and confirm visited exploration progress resumes instead of resetting.
-          8. Tap DRIVE and confirm vehicle controls/camera restore; regression-check Parking, Cook, Repair, Mechanic Job, prior missions, forest survival and restricted puzzle/gate.
-          9. Record ocean/swim FPS, stutter/GC, thermal and battery observations with device model + Android version.
+          Phase 5 FINAL EXIT priorities:
+          1. Confirm startup driving LEFT/RIGHT/GO/REV/ACTION, vehicle response and driving camera.
+          2. Tap SWIM TEST; driving controls must hide, six swim controls must appear, and the same gameplay camera must hand off to SwimPrototypeActor.
+          3. Verify LEFT/RIGHT with SWIM multitouch, BACK, DIVE, SURFACE, and that SURFACE safely wins if DIVE + SURFACE overlap.
+          4. Tap DRIVE and confirm driving input/camera restore cleanly. Repeat DRIVE -> SWIM TEST -> DRIVE several times.
+          5. Confirm Explore the Northern Ocean starts at 0/3. Visit ocean-cove, ocean-reef and ocean-wreck in any order; each must count once only.
+          6. Re-enter a visited exploration checkpoint and confirm the HUD does not double-count. Complete 3/3 and confirm free roam remains available.
+          7. Before mission completion, save after one/two checkpoints, fully close the app, relaunch, and confirm save/relaunch restores visited progress.
+          8. Regression-check Parking, Cook, Repair, Mechanic Job, prior mission types, forest survival and restricted pressure-plate/gate flow.
+          9. Record shoreline/surface/underwater FPS, stutter/GC, crashes, thermal and battery behavior with device model + Android version.
+          10. CI GREEN IS NOT DEVICE SIGN-OFF: record physical evidence before Phase 5 is marked accepted.
           EOF
 
           {
@@ -187,6 +188,6 @@ jobs:
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
             echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
-            echo "It performs full integrated generation, exploration validation, Android Player build and APK packaging."
-            echo "Physical Android testing remains mandatory for milestone sign-off."
+            echo "It performs full integrated generation, Phase 5 final exit validation, Android Player build and APK packaging."
+            echo "Physical Android testing remains mandatory for Phase 5 sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
