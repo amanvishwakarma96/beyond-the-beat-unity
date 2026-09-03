@@ -80,17 +80,20 @@ jobs:
         shell: bash
         run: |
           {
-            echo "# Fast Phase 6 Performance Validation"
+            echo "# Fast Phase 6 Optimization Validation"
             echo
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- Unity script compilation: **PASS**"
-            echo "- Phase 5 exit contracts: **PASS**"
-            echo "- 30 FPS baseline / 60 FPS stretch budget: **PASS**"
-            echo "- Frame-time / memory warning classification: **PASS**"
-            echo "- Sampled diagnostics architecture: **PASS**"
+            echo "- Phase 5 gameplay contracts: **PASS**"
+            echo "- Performance budget / sampled diagnostics: **PASS**"
+            echo "- Mobile render-quality profile: **PASS**"
+            echo "- Engine / managed stripping policy: **PASS**"
+            echo "- LZ4HC build-option composition: **PASS**"
+            echo "- BuildReport size diagnostics code: **PASS**"
             echo "- Historical scene rebuild: **NOT RUN**"
             echo "- Android APK packaging: **NOT RUN in PR validation**"
             echo
             echo "The full **Current Android Test Build** starts automatically after the PR is merged to main and can also be run manually."
-            echo "Physical Android profiling is still required for real FPS/thermal/battery acceptance."
+            echo "Its APK size must be compared with the 41.25 MB TEST-THIS-BUILD-48 baseline."
+            echo "Physical Android install/launch/regression testing remains mandatory because stripping failures may be runtime-only."
           } >> "${GITHUB_STEP_SUMMARY}"
