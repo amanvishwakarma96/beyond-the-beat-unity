@@ -21,6 +21,7 @@ namespace BeyondTheBeat.Editor
             Phase5ExplorationFastValidation.Validate();
             Phase6MobileQualityFastValidation.ValidateQualityOnly();
             Phase6BuildSizeFastValidation.ValidateBuildSizeOnly();
+            Phase6TutorialFastValidation.ValidateTutorialOnly();
 
             MobilePerformanceBudget budget = ScriptableObject.CreateInstance<MobilePerformanceBudget>();
             try
@@ -66,7 +67,7 @@ namespace BeyondTheBeat.Editor
             }
 
             Debug.Log(
-                "[Beyond The Beat] FAST PR VALIDATION PASS: Phase 5 gameplay plus Phase 6 performance, render-quality and build-size/stripping contracts passed without scene regeneration or APK packaging.");
+                "[Beyond The Beat] FAST PR VALIDATION PASS: Phase 5 gameplay plus Phase 6 performance, render-quality, build-size/stripping and tutorial/onboarding contracts passed without scene regeneration or APK packaging.");
         }
 
         private static bool ValidateRepositoryContracts()

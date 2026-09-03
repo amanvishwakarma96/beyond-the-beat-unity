@@ -38,6 +38,10 @@ namespace BeyondTheBeat.Editor
                 Phase6MobileQualityBuilder.ValidateMobileQualityOptimizationOrThrow();
                 AppendDiagnostic("Phase 6 mobile render-quality optimization validation PASS.");
 
+                Phase6TutorialBuilder.BuildTutorialOnboarding();
+                Phase6TutorialBuilder.ValidateTutorialOnboardingOrThrow();
+                AppendDiagnostic("Phase 6 tutorial/onboarding profile, input-observer progression and touch-safe HUD validation PASS.");
+
                 MobileBuildOptimizationProfile buildProfile = Phase6BuildSizeBuilder.PrepareAndValidateOrThrow();
                 AppendDiagnostic(
                     $"Phase 6 build-size optimization PASS. stripEngine={buildProfile.StripEngineCode}, " +
@@ -47,8 +51,8 @@ namespace BeyondTheBeat.Editor
                 EnsureSceneBuildSettings();
                 BuildDevelopmentAndroidApk(buildProfile);
                 AppendDiagnostic(
-                    "BuildAndroid PASS. Phase 6 performance + render-quality + build-size optimization is packaged; " +
-                    "physical install/FPS/thermal/battery validation remains required.");
+                    "BuildAndroid PASS. Phase 6 performance + render-quality + tutorial/onboarding + build-size optimization is packaged; " +
+                    "physical onboarding/touch/install/FPS/thermal/battery validation remains required.");
             }
             catch (Exception exception)
             {
