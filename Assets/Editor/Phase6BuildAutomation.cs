@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using BeyondTheBeat.Performance;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -37,10 +38,17 @@ namespace BeyondTheBeat.Editor
                 Phase6MobileQualityBuilder.ValidateMobileQualityOptimizationOrThrow();
                 AppendDiagnostic("Phase 6 mobile render-quality optimization validation PASS.");
 
-                EnsureSceneBuildSettings();
-                BuildDevelopmentAndroidApk();
+                MobileBuildOptimizationProfile buildProfile = Phase6BuildSizeBuilder.PrepareAndValidateOrThrow();
                 AppendDiagnostic(
-                    "BuildAndroid PASS. Phase 6 performance + mobile render-quality optimization is packaged; physical device FPS/thermal/battery validation remains required.");
+                    $"Phase 6 build-size optimization PASS. stripEngine={buildProfile.StripEngineCode}, " +
+                    $"managed={buildProfile.ManagedStripping}, lz4hc={buildProfile.UseLz4HcCompression}, " +
+                    $"architectures={PlayerSettings.Android.targetArchitectures}.");
+
+                EnsureSceneBuildSettings();
+                BuildDevelopmentAndroidApk(buildProfile);
+                AppendDiagnostic(
+                    "BuildAndroid PASS. Phase 6 performance + render-quality + build-size optimization is packaged; " +
+                    "physical install/FPS/thermal/battery validation remains required.");
             }
             catch (Exception exception)
             {
@@ -63,13 +71,13 @@ namespace BeyondTheBeat.Editor
             AssetDatabase.Refresh();
         }
 
-        private static void BuildDevelopmentAndroidApk()
+        private static void BuildDevelopmentAndroidApk(MobileBuildOptimizationProfile buildProfile)
         {
             string outputPath = GetCommandLineArgument("customBuildPath");
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase6-quality-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase6-size-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -92,15 +100,23 @@ namespace BeyondTheBeat.Editor
                 scenes = new[] { ScenePath },
                 locationPathName = outputPath,
                 target = BuildTarget.Android,
-                options = BuildOptions.Development
+                options = Phase6BuildSizeBuilder.GetBuildOptions(buildProfile, BuildOptions.Development)
             };
 
-            AppendDiagnostic($"Android BuildPipeline START. output={outputPath}");
+            AppendDiagnostic(
+                $"Android BuildPipeline START. output={outputPath}, options={options.options}, " +
+                $"stripEngine={PlayerSettings.stripEngineCode}, " +
+                $"managed={PlayerSettings.GetManagedStrippingLevel(BuildTargetGroup.Android)}, " +
+                $"architectures={PlayerSettings.Android.targetArchitectures}.");
+
             BuildReport report = BuildPipeline.BuildPlayer(options);
+            Phase6BuildSizeBuilder.WriteBuildSizeReport(report, buildProfile);
+
             BuildSummary summary = report.summary;
             AppendDiagnostic(
                 $"Android BuildPipeline RESULT={summary.result}, errors={summary.totalErrors}, warnings={summary.totalWarnings}, " +
-                $"size={summary.totalSize}, duration={summary.totalTime}.");
+                $"size={summary.totalSize}, duration={summary.totalTime}. " +
+                $"Detailed report={Phase6BuildSizeBuilder.ReportRelativePath}");
 
             if (summary.result != BuildResult.Succeeded)
             {
