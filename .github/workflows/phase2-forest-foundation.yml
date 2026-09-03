@@ -167,16 +167,17 @@ jobs:
           This is the ONLY APK intended for current device testing.
           CI success is not physical Android sign-off.
 
-          Phase 6 PERFORMANCE FOUNDATION priorities:
+          Phase 6 MOBILE QUALITY OPTIMIZATION priorities:
           1. Confirm startup driving LEFT/RIGHT/GO/REV/ACTION and all Phase 5 swim/exploration flows still work.
-          2. In this Development build, confirm the top-right performance overlay appears and cannot block/take touch input.
-          3. Record FPS / frame-ms / allocated-memory while driving, parked, in forest, restricted area, shoreline, surface swimming and underwater.
-          4. Baseline target is 30 FPS. Record sustained sections below 30 FPS and any frame-time warnings above 37 ms.
-          5. Exercise DRIVE -> SWIM TEST -> DRIVE repeatedly and complete 0/3 -> 3/3 exploration while watching for stutter/GC spikes.
-          6. Regression-check Parking, Cook, Repair, Mechanic Job, prior mission types, survival, puzzle/gate and save/relaunch.
-          7. Run at least one 15-minute session and record device model, Android version, thermal/throttling observations and battery drop.
-          8. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
-          9. CI GREEN IS NOT DEVICE PERFORMANCE SIGN-OFF: physical evidence is required before Phase 6 performance acceptance.
+          2. Confirm the development performance overlay remains visible and never consumes touch input.
+          3. Record FPS / frame-ms / allocated-memory while driving, forest, restricted area, shoreline, surface swim, underwater and exploration traversal.
+          4. Compare readings with the previous Phase 6 performance-foundation build when available; baseline target remains 30 FPS and frame-time warning remains 37 ms.
+          5. Check visual regressions from the mobile profile: shadow popping, hard-shadow readability, road/world aliasing, Ocean brightness/readability and Cove/Reef/Wreck marker visibility.
+          6. Verify DRIVE -> SWIM TEST -> DRIVE camera handoff has no exposure/brightness jump with gameplay HDR disabled.
+          7. Regression-check Parking, Cook, Repair, Mechanic Job, prior mission types, survival, puzzle/gate and save/relaunch.
+          8. Run at least one 15-minute session and record device model, Android version, thermal/throttling observations and battery drop.
+          9. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
+          10. CI GREEN IS NOT DEVICE PERFORMANCE SIGN-OFF: physical FPS/visual/thermal evidence is required before accepting the optimization.
           EOF
 
           {
@@ -212,6 +213,6 @@ jobs:
             echo "- APK size: **${{ steps.manifest.outputs.apk_size_mb }} MB / ${{ steps.manifest.outputs.apk_limit_mb }} MB**"
             echo
             echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
-            echo "It performs full integrated Phase 5 regression, Phase 6 performance-foundation validation, Android Player build and APK size enforcement."
-            echo "Physical Android FPS/thermal/battery testing remains mandatory for Phase 6 sign-off."
+            echo "It performs full integrated Phase 5 regression, Phase 6 performance + mobile-quality validation, Android Player build and APK size enforcement."
+            echo "Physical Android FPS/visual/thermal/battery testing remains mandatory for Phase 6 sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"
