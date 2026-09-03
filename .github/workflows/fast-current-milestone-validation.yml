@@ -71,7 +71,7 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase5ExplorationFastValidation.Validate
+          buildMethod: BeyondTheBeat.Editor.Phase5ExitFastValidation.Validate
           buildsPath: build/fast-validation
           allowDirtyBuild: true
 
@@ -80,18 +80,20 @@ jobs:
         shell: bash
         run: |
           {
-            echo "# Fast Current Milestone Validation"
+            echo "# Fast Phase 5 Exit Validation"
             echo
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- Unity script compilation: **PASS**"
             echo "- Android input backend guard: **PASS**"
             echo "- Swim/dive physics contract: **PASS**"
-            echo "- Mobile swim input contract: **PASS**"
-            echo "- Drive/swim camera handoff contract: **PASS**"
-            echo "- Exploration mission/checkpoint contract: **PASS**"
-            echo "- Exploration HUD/save schema contract: **PASS**"
+            echo "- Mobile swim input + camera handoff: **PASS**"
+            echo "- Exploration mission/HUD/save contract: **PASS**"
+            echo "- Fast PR workflow contract: **PASS**"
+            echo "- Post-merge single-APK workflow contract: **PASS**"
+            echo "- Physical Android checklist contract: **PASS**"
             echo "- Historical scene rebuild: **NOT RUN**"
             echo "- Android APK packaging: **NOT RUN in PR validation**"
             echo
             echo "The full **Current Android Test Build** starts automatically after the PR is merged to main and can also be run manually."
+            echo "CI GREEN IS NOT DEVICE SIGN-OFF."
           } >> "${GITHUB_STEP_SUMMARY}"
