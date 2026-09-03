@@ -228,9 +228,9 @@ namespace BeyondTheBeat.Editor
             background.color = new Color(0.025f, 0.035f, 0.055f, 0.88f);
             background.raycastTarget = false;
 
-            Text title = CreateText(panel.transform, "Title", new Vector2(20f, -12f), new Vector2(-112f, -48f), 22, TextAnchor.MiddleLeft, FontStyle.Bold);
-            Text instruction = CreateText(panel.transform, "Instruction", new Vector2(20f, -50f), new Vector2(-20f, -112f), 18, TextAnchor.UpperLeft, FontStyle.Normal);
-            Text progress = CreateText(panel.transform, "Progress", new Vector2(20f, -116f), new Vector2(-20f, -140f), 15, TextAnchor.MiddleLeft, FontStyle.Normal);
+            Text title = CreateText(panel.transform, "Title", new Vector2(-40f, -30f), new Vector2(500f, 34f), 22, TextAnchor.MiddleLeft, FontStyle.Bold);
+            Text instruction = CreateText(panel.transform, "Instruction", new Vector2(0f, -79f), new Vector2(580f, 56f), 18, TextAnchor.MiddleLeft, FontStyle.Normal);
+            Text progress = CreateText(panel.transform, "Progress", new Vector2(0f, -128f), new Vector2(580f, 22f), 15, TextAnchor.MiddleLeft, FontStyle.Normal);
 
             GameObject skipObject = new GameObject("Skip", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
             skipObject.transform.SetParent(panel.transform, false);
@@ -245,12 +245,7 @@ namespace BeyondTheBeat.Editor
             skipImage.raycastTarget = true;
             Button skipButton = skipObject.GetComponent<Button>();
 
-            Text skipText = CreateText(skipObject.transform, "Label", Vector2.zero, Vector2.zero, 16, TextAnchor.MiddleCenter, FontStyle.Bold);
-            RectTransform skipTextRect = skipText.GetComponent<RectTransform>();
-            skipTextRect.anchorMin = Vector2.zero;
-            skipTextRect.anchorMax = Vector2.one;
-            skipTextRect.offsetMin = Vector2.zero;
-            skipTextRect.offsetMax = Vector2.zero;
+            Text skipText = CreateText(skipObject.transform, "Label", Vector2.zero, new Vector2(92f, 40f), 16, TextAnchor.MiddleCenter, FontStyle.Bold);
             skipText.text = "SKIP";
 
             hud = canvas.gameObject.AddComponent<TutorialHud>();
@@ -262,8 +257,8 @@ namespace BeyondTheBeat.Editor
         private static Text CreateText(
             Transform parent,
             string name,
-            Vector2 offsetMin,
-            Vector2 offsetMax,
+            Vector2 anchoredPosition,
+            Vector2 size,
             int fontSize,
             TextAnchor alignment,
             FontStyle style)
@@ -271,11 +266,11 @@ namespace BeyondTheBeat.Editor
             GameObject textObject = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
             textObject.transform.SetParent(parent, false);
             RectTransform rect = textObject.GetComponent<RectTransform>();
-            rect.anchorMin = new Vector2(0f, 1f);
-            rect.anchorMax = new Vector2(1f, 1f);
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
             rect.pivot = new Vector2(0.5f, 1f);
-            rect.offsetMin = offsetMin;
-            rect.offsetMax = offsetMax;
+            rect.anchoredPosition = anchoredPosition;
+            rect.sizeDelta = size;
 
             Text text = textObject.GetComponent<Text>();
             text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
