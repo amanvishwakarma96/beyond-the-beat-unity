@@ -6,17 +6,30 @@ This milestone reduces Android package overhead without changing gameplay runtim
 
 The repository asset audit at the start of this slice found no production texture/audio payload under `Assets/Art` or `Assets/Audio` (only placeholder files). Because there is no meaningful source-media payload to optimize yet, this milestone deliberately does **not** add blanket texture/audio importer overrides.
 
+## Baseline
+
+The merged Phase 6 mobile-quality build (`TEST-THIS-BUILD-48`, source `73d7c709737cbc580f9407debc976c37d86c1db0`) produced:
+
+- APK: **41.25 MB**
+- soft-launch ceiling: **200 MB**
+- Unity: **6000.5.9f1**
+
+The first post-merge build from this milestone should be compared directly with that 41.25 MB APK baseline.
+
 ## Build policy
 
 The generated `Phase6_MobileBuildOptimization` profile currently requires:
 
-- Unity engine code stripping: **enabled**
+- Unity engine code stripping policy: **enabled**
 - Android managed stripping: **Low**
 - Build data compression: **LZ4HC**
 - Android architecture selection: **preserve the existing project value**
-- BuildReport largest-file entries: **15**
+- scripting backend: **preserve the existing project value**
+- BuildReport largest-file / packed-asset entries: **15 each**
 
 `Low` managed stripping is intentional for this first pass. The project contains event wiring, serialized fields and generic Unity component discovery patterns; moving directly to Medium/High before physical launch/regression validation would add avoidable runtime-stripping risk.
+
+`PlayerSettings.stripEngineCode` only removes unused native Unity engine code when the preserved Android scripting backend is IL2CPP. The setting is still enabled and recorded, but this milestone does not switch the project to IL2CPP merely to force a size reduction.
 
 ## Why ABI/backend are unchanged
 
@@ -54,11 +67,13 @@ The build writes `build/phase6-build-size-report.txt` containing:
 - Unity BuildResult
 - total BuildReport bytes / MiB
 - build duration
+- scripting backend
 - engine stripping state
 - managed stripping level
 - current Android architecture mask
 - LZ4HC state
 - largest generated build files
+- largest packed source assets and their packed byte contribution
 
 The report is included with CI diagnostics and the successful device-test artifact.
 
@@ -77,8 +92,8 @@ Stripping can fail only at runtime even when compilation and packaging succeed. 
 - Forest survival and restricted puzzle/gate still run;
 - performance overlay still samples in Development builds;
 - FPS/frame-time does not regress due to compression/loading changes;
-- startup/load time is compared with the prior test build;
-- APK size is recorded and compared with the previous Phase 6 build.
+- startup/load time is compared with `TEST-THIS-BUILD-48`;
+- APK size is compared with the **41.25 MB** baseline.
 
 ## Asset compression status
 
@@ -98,7 +113,7 @@ When real source media is introduced, importer optimization should be scoped by 
 
 Automated PASS proves the packaging configuration and diagnostics are deterministic.
 
-It does **not** prove runtime stripping safety.
+It does **not** prove runtime stripping safety or guarantee a size reduction until the post-merge APK is measured.
 
 **CI GREEN IS NOT DEVICE BUILD-SIZE SIGN-OFF.**
 
