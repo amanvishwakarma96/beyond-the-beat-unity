@@ -90,7 +90,8 @@ namespace BeyondTheBeat.UI
             bool showProgress = mission != null &&
                                 state == MissionState.Active &&
                                 ((mission.ObjectiveType == MissionObjectiveType.ReachAndSurvive && progress.TargetContextActive) ||
-                                 mission.ObjectiveType == MissionObjectiveType.ReachAndSolve);
+                                 mission.ObjectiveType == MissionObjectiveType.ReachAndSolve ||
+                                 mission.ObjectiveType == MissionObjectiveType.ExploreLocations);
 
             if (progressRoot != null)
             {
@@ -111,7 +112,9 @@ namespace BeyondTheBeat.UI
                     false,
                     0f,
                     mission.SurvivalDurationSeconds,
-                    false)
+                    false,
+                    0,
+                    mission.ObjectiveType == MissionObjectiveType.ExploreLocations ? mission.ExplorationZoneCount : 0)
                 : default;
             return CreateSnapshot(mission, state, progress);
         }
@@ -140,6 +143,11 @@ namespace BeyondTheBeat.UI
                     if (mission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
                     {
                         return CreateReachAndSolveSnapshot(mission, progress);
+                    }
+
+                    if (mission.ObjectiveType == MissionObjectiveType.ExploreLocations)
+                    {
+                        return CreateExploreLocationsSnapshot(mission, progress);
                     }
 
                     return new MissionHudSnapshot(
@@ -249,6 +257,20 @@ namespace BeyondTheBeat.UI
                     ? "Solve the access puzzle and enter the restricted area."
                     : mission.Description,
                 "SOLVE PUZZLE • REACH AREA");
+        }
+
+        private static MissionHudSnapshot CreateExploreLocationsSnapshot(
+            MissionDefinition mission,
+            MissionProgressSnapshot progress)
+        {
+            int visited = Mathf.Clamp(progress.ExplorationVisitedCount, 0, progress.ExplorationRequiredCount);
+            int required = Mathf.Max(1, progress.ExplorationRequiredCount);
+            int percent = Mathf.RoundToInt(progress.NormalizedProgress * 100f);
+
+            return new MissionHudSnapshot(
+                mission.DisplayName,
+                $"Discover ocean checkpoints • {visited}/{required}",
+                $"EXPLORING • {percent}%");
         }
 
         private void Subscribe()

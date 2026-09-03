@@ -66,7 +66,7 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase5BuildAutomation.BuildAndroid
+          buildMethod: BeyondTheBeat.Editor.Phase5ExplorationBuildAutomation.BuildAndroid
           buildName: BeyondTheBeat-TEST-${{ github.run_number }}
           buildsPath: build
           versioning: Custom
@@ -145,15 +145,16 @@ jobs:
           This is the ONLY APK intended for current device testing.
           CI success is not physical Android sign-off.
 
-          Phase 5 MOBILE SWIM + CAMERA priorities:
+          Phase 5 EXPLORATION MISSION priorities:
           1. Confirm normal startup driving controls LEFT/RIGHT/GO/REV/ACTION still work.
-          2. Tap SWIM TEST; driving controls must hide, swim controls must appear, and the existing gameplay camera must hand off to SwimPrototypeActor.
-          3. Validate LEFT/RIGHT + SWIM/BACK multitouch movement.
-          4. Validate DIVE reaches underwater target depth and SURFACE returns upward; SURFACE must safely win if both are pressed.
-          5. Confirm there is no second-camera flicker/conflict during drive -> swim -> drive transitions.
-          6. Tap DRIVE; vehicle controls and camera target must restore cleanly. Repeat the handoff multiple times.
-          7. Regression-check Parking, Cook, Repair, Mechanic Job, mission HUD/objectives, forest survival, restricted gate/puzzle and save/resume.
-          8. Record shoreline/ocean FPS, stutter/GC, thermal and battery observations with device model + Android version.
+          2. Tap SWIM TEST and confirm the existing gameplay camera hands off to SwimPrototypeActor with swim controls visible.
+          3. Verify the mission HUD shows Explore the Northern Ocean with 0/3 checkpoint progress.
+          4. Swim through the Cove, Reef and Wreck marker volumes in any order; each unique checkpoint must increment progress once.
+          5. Re-enter an already visited checkpoint and confirm progress does not double-count.
+          6. Complete all three checkpoints and confirm MISSION COMPLETE while free roam remains available.
+          7. Before completion, relaunch from a save after one/two checkpoints and confirm visited exploration progress resumes instead of resetting.
+          8. Tap DRIVE and confirm vehicle controls/camera restore; regression-check Parking, Cook, Repair, Mechanic Job, prior missions, forest survival and restricted puzzle/gate.
+          9. Record ocean/swim FPS, stutter/GC, thermal and battery observations with device model + Android version.
           EOF
 
           {
@@ -186,6 +187,6 @@ jobs:
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo
             echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
-            echo "It performs full integrated generation, validation, Android Player build and APK packaging."
+            echo "It performs full integrated generation, exploration validation, Android Player build and APK packaging."
             echo "Physical Android testing remains mandatory for milestone sign-off."
           } >> "${GITHUB_STEP_SUMMARY}"

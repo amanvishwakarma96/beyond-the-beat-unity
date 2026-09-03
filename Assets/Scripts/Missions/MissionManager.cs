@@ -23,12 +23,33 @@ namespace BeyondTheBeat.Missions
             float survivalElapsedSeconds,
             float survivalRequiredSeconds,
             bool puzzleSolved)
+            : this(
+                objectiveType,
+                targetContextActive,
+                survivalElapsedSeconds,
+                survivalRequiredSeconds,
+                puzzleSolved,
+                0,
+                0)
+        {
+        }
+
+        public MissionProgressSnapshot(
+            MissionObjectiveType objectiveType,
+            bool targetContextActive,
+            float survivalElapsedSeconds,
+            float survivalRequiredSeconds,
+            bool puzzleSolved,
+            int explorationVisitedCount,
+            int explorationRequiredCount)
         {
             ObjectiveType = objectiveType;
             TargetContextActive = targetContextActive;
             SurvivalElapsedSeconds = Mathf.Max(0f, survivalElapsedSeconds);
             SurvivalRequiredSeconds = Mathf.Max(0f, survivalRequiredSeconds);
             PuzzleSolved = puzzleSolved;
+            ExplorationVisitedCount = Mathf.Max(0, explorationVisitedCount);
+            ExplorationRequiredCount = Mathf.Max(0, explorationRequiredCount);
         }
 
         public MissionObjectiveType ObjectiveType { get; }
@@ -36,6 +57,9 @@ namespace BeyondTheBeat.Missions
         public float SurvivalElapsedSeconds { get; }
         public float SurvivalRequiredSeconds { get; }
         public bool PuzzleSolved { get; }
+        public int ExplorationVisitedCount { get; }
+        public int ExplorationRequiredCount { get; }
+
         public float NormalizedProgress
         {
             get
@@ -54,6 +78,13 @@ namespace BeyondTheBeat.Missions
                     }
 
                     return progress;
+                }
+
+                if (ObjectiveType == MissionObjectiveType.ExploreLocations)
+                {
+                    return ExplorationRequiredCount > 0
+                        ? Mathf.Clamp01((float)ExplorationVisitedCount / ExplorationRequiredCount)
+                        : 0f;
                 }
 
                 return SurvivalRequiredSeconds > 0f
@@ -83,6 +114,8 @@ namespace BeyondTheBeat.Missions
         private readonly HashSet<ZoneContext> subscribedZones = new HashSet<ZoneContext>();
         private readonly Dictionary<PuzzleStateController, Action<bool>> puzzleStateHandlers =
             new Dictionary<PuzzleStateController, Action<bool>>();
+        private readonly HashSet<string> visitedExplorationZoneIds =
+            new HashSet<string>(StringComparer.Ordinal);
 
         private MissionDefinition currentMission;
         private MissionState state = MissionState.Inactive;
@@ -100,6 +133,7 @@ namespace BeyondTheBeat.Missions
         public int ObservedPuzzleCount => observedPuzzles != null ? observedPuzzles.Length : 0;
         public ForestSurvivalController SurvivalController => survivalController;
         public bool HasActiveMission => currentMission != null && state == MissionState.Active;
+        public int ExplorationVisitedCount => visitedExplorationZoneIds.Count;
         public MissionProgressSnapshot Progress => CreateProgressSnapshot();
 
         public event Action<MissionDefinition> MissionStarted;
@@ -150,6 +184,13 @@ namespace BeyondTheBeat.Missions
                 return false;
             }
 
+            if (mission.ObjectiveType == MissionObjectiveType.ExploreLocations && !HasObservedExplorationZones(mission))
+            {
+                Debug.LogError(
+                    $"[Beyond The Beat] MissionManager cannot start exploration mission '{mission.MissionId}' because one or more configured checkpoints are not observed.");
+                return false;
+            }
+
             PuzzleStateController puzzleSource = null;
             if (mission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
             {
@@ -173,8 +214,9 @@ namespace BeyondTheBeat.Missions
             PublishProgress(true);
 
             Debug.Log(
-                $"[Beyond The Beat] Mission STARTED: id='{mission.MissionId}', " +
-                $"objective={mission.ObjectiveType}, targetZone='{mission.TargetZoneId}', targetPuzzle='{mission.TargetPuzzleId}'.");
+                $"[Beyond The Beat] Mission STARTED: id='{mission.MissionId}', objective={mission.ObjectiveType}, " +
+                $"targetZone='{mission.TargetZoneId}', targetPuzzle='{mission.TargetPuzzleId}', " +
+                $"explorationCheckpoints={mission.ExplorationZoneCount}.");
 
             MissionStarted?.Invoke(mission);
             return true;
@@ -207,6 +249,13 @@ namespace BeyondTheBeat.Missions
             {
                 Debug.LogWarning(
                     $"[Beyond The Beat] Mission restore cannot activate ReachAndSurvive mission '{missionId}' without a survival source.");
+                return false;
+            }
+
+            if (mission.ObjectiveType == MissionObjectiveType.ExploreLocations && !HasObservedExplorationZones(mission))
+            {
+                Debug.LogWarning(
+                    $"[Beyond The Beat] Mission restore cannot activate exploration mission '{missionId}' because one or more configured checkpoints are not observed.");
                 return false;
             }
 
@@ -254,6 +303,47 @@ namespace BeyondTheBeat.Missions
             return true;
         }
 
+        public bool RestoreExplorationProgress(IEnumerable<string> restoredZoneIds)
+        {
+            if (!HasActiveMission || currentMission.ObjectiveType != MissionObjectiveType.ExploreLocations)
+            {
+                return false;
+            }
+
+            visitedExplorationZoneIds.Clear();
+            if (restoredZoneIds != null)
+            {
+                foreach (string zoneId in restoredZoneIds)
+                {
+                    if (!string.IsNullOrWhiteSpace(zoneId) && currentMission.IsExplorationZone(zoneId))
+                    {
+                        visitedExplorationZoneIds.Add(zoneId);
+                    }
+                }
+            }
+
+            PublishProgress(true);
+            if (visitedExplorationZoneIds.Count >= currentMission.ExplorationZoneCount)
+            {
+                CompleteActiveMission();
+            }
+
+            return true;
+        }
+
+        public string[] GetVisitedExplorationZoneIds()
+        {
+            if (visitedExplorationZoneIds.Count == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            string[] values = new string[visitedExplorationZoneIds.Count];
+            visitedExplorationZoneIds.CopyTo(values);
+            Array.Sort(values, StringComparer.Ordinal);
+            return values;
+        }
+
         public bool FailActiveMission()
         {
             if (!HasActiveMission)
@@ -283,6 +373,11 @@ namespace BeyondTheBeat.Missions
             if (!HasActiveMission)
             {
                 return false;
+            }
+
+            if (currentMission.ObjectiveType == MissionObjectiveType.ExploreLocations)
+            {
+                return TryProcessExplorationCheckpoint(zone, actor);
             }
 
             if (currentMission.ObjectiveType == MissionObjectiveType.ReachLocation)
@@ -318,7 +413,7 @@ namespace BeyondTheBeat.Missions
 
         public bool TryProcessZoneExit(ZoneContext zone, GameObject actor)
         {
-            if (!HasActiveMission ||
+            if (!HasActiveMission || currentMission.ObjectiveType == MissionObjectiveType.ExploreLocations ||
                 !MissionObjectiveEvaluator.IsTargetZone(currentMission, zone, actor, playerActor))
             {
                 return false;
@@ -346,9 +441,7 @@ namespace BeyondTheBeat.Missions
 
         public bool TryProcessPuzzleState(PuzzleStateController puzzle, bool solved)
         {
-            if (!HasActiveMission ||
-                currentMission.ObjectiveType != MissionObjectiveType.ReachAndSolve ||
-                puzzle == null)
+            if (!HasActiveMission || currentMission.ObjectiveType != MissionObjectiveType.ReachAndSolve || puzzle == null)
             {
                 return false;
             }
@@ -415,6 +508,15 @@ namespace BeyondTheBeat.Missions
             return CompleteActiveMission();
         }
 
+        public void RebindZoneSources()
+        {
+            UnsubscribeFromZones();
+            if (isActiveAndEnabled)
+            {
+                SubscribeToZones();
+            }
+        }
+
         public void RebindPuzzleSources()
         {
             UnsubscribeFromPuzzles();
@@ -422,6 +524,27 @@ namespace BeyondTheBeat.Missions
             {
                 SubscribeToPuzzles();
             }
+        }
+
+        private bool TryProcessExplorationCheckpoint(ZoneContext zone, GameObject actor)
+        {
+            if (!MissionObjectiveEvaluator.IsExplorationCheckpoint(currentMission, zone, actor, playerActor))
+            {
+                return false;
+            }
+
+            if (!visitedExplorationZoneIds.Add(zone.ZoneId))
+            {
+                return false;
+            }
+
+            PublishProgress(true);
+            if (visitedExplorationZoneIds.Count >= currentMission.ExplorationZoneCount)
+            {
+                CompleteActiveMission();
+            }
+
+            return true;
         }
 
         private void HandleZoneEntered(ZoneContext zone, GameObject actor)
@@ -465,26 +588,53 @@ namespace BeyondTheBeat.Missions
             MissionCompleted?.Invoke(completedMission);
 
             Debug.Log(
-                $"[Beyond The Beat] Mission COMPLETED: id='{completedMission.MissionId}'. " +
-                "Free roam remains available.");
+                $"[Beyond The Beat] Mission COMPLETED: id='{completedMission.MissionId}'. Free roam remains available.");
             return true;
         }
 
         private MissionDefinition ResolveMissionById(string missionId)
         {
-            if (currentMission != null &&
-                string.Equals(currentMission.MissionId, missionId, StringComparison.Ordinal))
+            if (currentMission != null && string.Equals(currentMission.MissionId, missionId, StringComparison.Ordinal))
             {
                 return currentMission;
             }
 
-            if (startingMission != null &&
-                string.Equals(startingMission.MissionId, missionId, StringComparison.Ordinal))
+            if (startingMission != null && string.Equals(startingMission.MissionId, missionId, StringComparison.Ordinal))
             {
                 return startingMission;
             }
 
             return null;
+        }
+
+        private bool HasObservedExplorationZones(MissionDefinition mission)
+        {
+            if (mission == null || mission.ObjectiveType != MissionObjectiveType.ExploreLocations || observedZones == null)
+            {
+                return false;
+            }
+
+            IReadOnlyList<string> required = mission.ExplorationZoneIds;
+            for (int i = 0; i < required.Count; i++)
+            {
+                bool found = false;
+                for (int j = 0; j < observedZones.Length; j++)
+                {
+                    ZoneContext zone = observedZones[j];
+                    if (zone != null && string.Equals(zone.ZoneId, required[i], StringComparison.Ordinal))
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
+                {
+                    return false;
+                }
+            }
+
+            return required.Count > 0;
         }
 
         private PuzzleStateController ResolvePuzzleSource(string puzzleId)
@@ -497,8 +647,7 @@ namespace BeyondTheBeat.Missions
             for (int i = 0; i < observedPuzzles.Length; i++)
             {
                 PuzzleStateController puzzle = observedPuzzles[i];
-                if (puzzle != null &&
-                    puzzle.IsConfigured &&
+                if (puzzle != null && puzzle.IsConfigured &&
                     string.Equals(puzzle.PuzzleId, puzzleId, StringComparison.Ordinal))
                 {
                     return puzzle;
@@ -524,6 +673,7 @@ namespace BeyondTheBeat.Missions
             targetContextActive = false;
             survivalElapsedSeconds = 0f;
             puzzleSolved = false;
+            visitedExplorationZoneIds.Clear();
             lastPublishedSurvivalElapsed = -1f;
         }
 
@@ -532,16 +682,20 @@ namespace BeyondTheBeat.Missions
             MissionObjectiveType objectiveType = currentMission != null
                 ? currentMission.ObjectiveType
                 : MissionObjectiveType.ReachLocation;
-            float requiredSeconds = currentMission != null
-                ? currentMission.SurvivalDurationSeconds
-                : 0f;
+            float requiredSeconds = currentMission != null ? currentMission.SurvivalDurationSeconds : 0f;
+            int explorationRequiredCount = currentMission != null &&
+                                           currentMission.ObjectiveType == MissionObjectiveType.ExploreLocations
+                ? currentMission.ExplorationZoneCount
+                : 0;
 
             return new MissionProgressSnapshot(
                 objectiveType,
                 targetContextActive,
                 survivalElapsedSeconds,
                 requiredSeconds,
-                puzzleSolved);
+                puzzleSolved,
+                visitedExplorationZoneIds.Count,
+                explorationRequiredCount);
         }
 
         private void PublishProgress(bool force)
