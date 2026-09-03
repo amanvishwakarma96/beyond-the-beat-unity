@@ -23,10 +23,14 @@ namespace BeyondTheBeat.Editor
             Phase5ExplorationMissionBuilder.ValidateExplorationMissionOrThrow();
             AppendDiagnostic("Phase 5 exploration mission validation PASS.");
 
+            Phase5ExitBuilder.ValidateFinalExitIntegrationOrThrow();
+            AppendDiagnostic(
+                "Phase 5 FINAL exit integration validation PASS. Automated evidence only; physical Android sign-off remains separate.");
+
             EnsureSceneBuildSettings();
             BuildDevelopmentAndroidApk();
             AppendDiagnostic(
-                "BuildAndroid PASS. Ocean + swim/dive + mobile swim/camera + exploration mission automated validation passed. Physical Android validation remains required.");
+                "BuildAndroid PASS. Ocean + swim/dive + mobile swim/camera + exploration + final exit automated validation passed. Physical Android validation remains required.");
         }
 
         private static void EnsureSceneBuildSettings()
