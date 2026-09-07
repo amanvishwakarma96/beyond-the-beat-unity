@@ -80,7 +80,7 @@ jobs:
         shell: bash
         run: |
           {
-            echo "# Fast Phase 6 Optimization + Onboarding + UI Polish Validation"
+            echo "# Fast Phase 6 Optimization + Onboarding + UI Polish + Store Assets Validation"
             echo
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- Unity script compilation: **PASS**"
@@ -96,10 +96,15 @@ jobs:
             echo "- Safe-area anchor mapping / fallback: **PASS**"
             echo "- Safe-area fitter no-Update contract: **PASS**"
             echo "- Reference Mission/Tutorial/Performance/Mechanic layout separation: **PASS**"
+            echo "- Play Store icon / feature-graphic dimensions: **PASS**"
+            echo "- Deterministic store-brand renderer: **PASS**"
+            echo "- Listing title / <=80 character short-description contract: **PASS**"
+            echo "- Real-gameplay screenshot capture boundary: **PASS**"
             echo "- Historical scene rebuild: **NOT RUN**"
+            echo "- Store PNG file generation: **NOT RUN in PR validation**"
             echo "- Android APK packaging: **NOT RUN in PR validation**"
             echo
             echo "The full **Current Android Test Build** starts automatically after the PR is merged to main and can also be run manually."
-            echo "Its APK size must remain within the 200 MB Phase 6 ceiling and can still be compared with the 41.25 MB TEST-THIS-BUILD-48 baseline."
-            echo "Physical Android notch/cutout/readability/multitouch/overlap/regression testing remains mandatory; CI cannot prove device ergonomics or runtime-only stripping behavior."
+            echo "It will generate the store PNGs, launcher icons and listing package, and include them inside the single TEST-THIS-BUILD artifact next to the APK."
+            echo "Real Google Play screenshots must still be captured from the Android build; CI does not fabricate gameplay screenshots or prove Play Console acceptance."
           } >> "${GITHUB_STEP_SUMMARY}"
