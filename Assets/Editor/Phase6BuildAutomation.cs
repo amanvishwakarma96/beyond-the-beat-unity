@@ -54,6 +54,10 @@ namespace BeyondTheBeat.Editor
                     $"Phase 6 device-matrix/API 36 readiness PASS: targetSdk={PlayerSettings.Android.targetSdkVersion}; " +
                     "API 30/33/36 physical lanes and pending evidence package prepared. Physical device sign-off remains required.");
 
+                Phase7IntegrationBuilder.PrepareAndValidateOrThrow();
+                AppendDiagnostic(
+                    "Phase 7 systemic integration PASS: vehicle wear/degradation, paid repair economy, tactical driving cluster, wear-zone wiring and condition persistence sources are integrated.");
+
                 MobileBuildOptimizationProfile buildProfile = Phase6BuildSizeBuilder.PrepareAndValidateOrThrow();
                 AppendDiagnostic(
                     $"Phase 6 build-size optimization PASS. stripEngine={buildProfile.StripEngineCode}, " +
@@ -63,8 +67,8 @@ namespace BeyondTheBeat.Editor
                 EnsureSceneBuildSettings();
                 BuildDevelopmentAndroidApk(buildProfile);
                 AppendDiagnostic(
-                    "BuildAndroid PASS. Phase 6 performance + render-quality + tutorial/onboarding + mobile HUD polish + store assets + API 36 device-matrix readiness + build-size optimization is packaged; " +
-                    "physical screenshots/device-matrix/safe-area/readability/touch/install/FPS/thermal/battery validation remains required.");
+                    "BuildAndroid PASS. Phase 5/6 prerequisites plus Phase 7 vehicle/economy/repair/UI/persistence integration are packaged; " +
+                    "physical wear feel, repair balance, screenshots/device-matrix/safe-area/readability/touch/install/FPS/thermal/battery validation remains required.");
             }
             catch (Exception exception)
             {
@@ -79,7 +83,7 @@ namespace BeyondTheBeat.Editor
             SceneAsset sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath);
             if (sceneAsset == null)
             {
-                throw new InvalidOperationException($"Phase 6 build requires scene '{ScenePath}'.");
+                throw new InvalidOperationException($"Phase 6/7 build requires scene '{ScenePath}'.");
             }
 
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
@@ -93,7 +97,7 @@ namespace BeyondTheBeat.Editor
             if (string.IsNullOrWhiteSpace(outputPath))
             {
                 outputPath = Path.GetFullPath(
-                    Path.Combine("build", "Android", "BeyondTheBeat-Phase6-size-local.apk"));
+                    Path.Combine("build", "Android", "BeyondTheBeat-Phase7-integration-local.apk"));
             }
 
             if (!string.Equals(Path.GetExtension(outputPath), ".apk", StringComparison.OrdinalIgnoreCase))
@@ -139,13 +143,13 @@ namespace BeyondTheBeat.Editor
             if (summary.result != BuildResult.Succeeded)
             {
                 throw new InvalidOperationException(
-                    $"Phase 6 Android build failed with result {summary.result}. Errors: {summary.totalErrors}, warnings: {summary.totalWarnings}.");
+                    $"Phase 7 integrated Android build failed with result {summary.result}. Errors: {summary.totalErrors}, warnings: {summary.totalWarnings}.");
             }
 
             if (!File.Exists(outputPath))
             {
                 throw new FileNotFoundException(
-                    "Unity reported a successful Phase 6 Android build but the APK was not found.", outputPath);
+                    "Unity reported a successful Phase 7 integrated Android build but the APK was not found.", outputPath);
             }
         }
 
@@ -171,7 +175,7 @@ namespace BeyondTheBeat.Editor
             {
                 Directory.CreateDirectory(directory);
             }
-            File.WriteAllText(path, $"[{DateTime.UtcNow:O}] Phase 6 diagnostics initialized.\n");
+            File.WriteAllText(path, $"[{DateTime.UtcNow:O}] Phase 6/7 diagnostics initialized.\n");
         }
 
         private static void AppendDiagnostic(string message)

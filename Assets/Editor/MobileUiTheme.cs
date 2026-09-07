@@ -15,13 +15,16 @@ namespace BeyondTheBeat.Editor
         private const string RoundedBorderSpritePath = UiFolder + "/BTB_RoundedRectBorder.png";
         private const string ChamferedBorderSpritePath = UiFolder + "/BTB_ChamferedRectBorder.png";
 
-        public static readonly Color Ink = new Color(0.025f, 0.035f, 0.055f, 0.92f);
-        public static readonly Color InkSoft = new Color(0.035f, 0.055f, 0.085f, 0.82f);
-        public static readonly Color Cyan = new Color(0.15f, 0.82f, 0.92f, 1f);
-        public static readonly Color Amber = new Color(1.0f, 0.64f, 0.18f, 1f);
-        public static readonly Color Red = new Color(0.95f, 0.27f, 0.24f, 1f);
-        public static readonly Color White = new Color(0.96f, 0.98f, 1f, 1f);
-        public static readonly Color Muted = new Color(0.66f, 0.74f, 0.82f, 1f);
+        // Phase 7 tactical palette. Ink is the requested #1E222A charcoal anchor.
+        public static readonly Color Ink = new Color(30f / 255f, 34f / 255f, 42f / 255f, 0.96f);
+        public static readonly Color InkSoft = new Color(42f / 255f, 48f / 255f, 58f / 255f, 0.90f);
+        public static readonly Color Cyan = new Color(47f / 255f, 230f / 255f, 242f / 255f, 1f);
+        public static readonly Color Amber = new Color(1f, 181f / 255f, 71f / 255f, 1f);
+        public static readonly Color Red = new Color(1f, 92f / 255f, 99f / 255f, 1f);
+        public static readonly Color White = new Color(247f / 255f, 249f / 255f, 252f / 255f, 1f);
+        public static readonly Color Muted = new Color(154f / 255f, 167f / 255f, 183f / 255f, 1f);
+
+        public const float BorderPadding = 10f;
 
         public static Sprite CircleSprite => GetOrCreateLegacySprite(CircleSpritePath, true);
         public static Sprite RoundedRectSprite => GetOrCreateLegacySprite(RoundedSpritePath, false);
@@ -148,8 +151,6 @@ namespace BeyondTheBeat.Editor
             File.WriteAllBytes(path, texture.EncodeToPNG());
             UnityEngine.Object.DestroyImmediate(texture);
 
-            // New panel sprites are authored for Image.Type.Sliced. Keeping a generous
-            // inset prevents the cut/rounded corners and 1-2 px hairline from stretching.
             ConfigureImporter(path, new Vector4(24f, 24f, 24f, 24f));
             return LoadGeneratedSprite(path);
         }
@@ -173,9 +174,6 @@ namespace BeyondTheBeat.Editor
             float right = max - x;
             float bottom = y;
             float top = max - y;
-
-            // Two opposing corners are cut: bottom-left and top-right. Distances to
-            // the diagonal half-planes are normalized so anti-aliasing is uniform.
             const float inverseSqrtTwo = 0.70710678f;
             float bottomLeftCut = (x + y - chamfer) * inverseSqrtTwo;
             float topRightCut = ((max - x) + (max - y) - chamfer) * inverseSqrtTwo;

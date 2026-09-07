@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace BeyondTheBeat.Vehicle
@@ -49,6 +50,16 @@ namespace BeyondTheBeat.Vehicle
         [SerializeField, Min(0.1f)] private float forwardFrictionStiffness = 1.4f;
         [SerializeField, Min(0.1f)] private float sidewaysFrictionStiffness = 1.6f;
 
+        [Header("Vehicle Condition")]
+        [SerializeField, Range(0f, 1f)] private float healthCondition = 1f;
+        [SerializeField, Range(0f, 1f)] private float tireWear;
+        [SerializeField, Min(1f)] private float offRoadWearStartSpeedKph = 45f;
+        [SerializeField, Min(0f)] private float offRoadHealthWearPerSecond = 0.0025f;
+        [SerializeField, Min(0f)] private float offRoadTireWearPerSecond = 0.008f;
+        [SerializeField, Min(0f)] private float severeCollisionSpeed = 8f;
+        [SerializeField, Min(0f)] private float collisionHealthDamagePerMeterPerSecond = 0.018f;
+        [SerializeField, Range(0f, 5f)] private float maxSteeringDriftDegrees = 1.8f;
+
         [Header("Simulation")]
         [SerializeField, Min(0.1f)] private float substepSpeedThreshold = 5f;
         [SerializeField, Range(1, 20)] private int substepsBelowThreshold = 12;
@@ -59,6 +70,7 @@ namespace BeyondTheBeat.Vehicle
         private float throttleInput;
         private float brakeInput;
         private float currentSteerAngle;
+        private bool offRoadSurfaceActive;
 
         public float CurrentSpeedKph { get; private set; }
 
@@ -76,6 +88,18 @@ namespace BeyondTheBeat.Vehicle
         public Vector3 CenterOfMassOffset => centerOfMassOffset;
         public float DownforceCoefficient => downforceCoefficient;
 
+        public float HealthCondition => Mathf.Clamp01(healthCondition);
+        public float TireWear => Mathf.Clamp01(tireWear);
+        public float TireTraction01 => 1f - TireWear;
+        public float ServiceNeed01 => Mathf.Max(1f - HealthCondition, TireWear);
+        public bool NeedsService => ServiceNeed01 > 0.0001f;
+        public bool OffRoadSurfaceActive => offRoadSurfaceActive;
+        public float EffectiveAccelerationMultiplier => EvaluateAccelerationMultiplier(HealthCondition);
+        public float EffectiveBrakeMultiplier => EvaluateBrakeMultiplier(HealthCondition, TireWear);
+        public float EffectiveTractionMultiplier => EvaluateTractionMultiplier(TireWear);
+
+        public event Action<VehicleController, float, float> ConditionChanged;
+
         public bool IsGrounded =>
             (frontLeftCollider != null && frontLeftCollider.isGrounded) ||
             (frontRightCollider != null && frontRightCollider.isGrounded) ||
@@ -85,6 +109,8 @@ namespace BeyondTheBeat.Vehicle
         private void Awake()
         {
             body = GetComponent<Rigidbody>();
+            healthCondition = Mathf.Clamp01(healthCondition);
+            tireWear = Mathf.Clamp01(tireWear);
             ApplyChassisTuning();
             ApplyWheelTuning();
         }
@@ -97,7 +123,7 @@ namespace BeyondTheBeat.Vehicle
             }
 
             CurrentSpeedKph = body.linearVelocity.magnitude * 3.6f;
-
+            ApplyOffRoadWear();
             ApplySteering();
             ApplyDriveAndBrakes();
             ApplyDownforce();
@@ -109,6 +135,25 @@ namespace BeyondTheBeat.Vehicle
             UpdateWheelVisual(frontRightCollider, frontRightVisual);
             UpdateWheelVisual(rearLeftCollider, rearLeftVisual);
             UpdateWheelVisual(rearRightCollider, rearRightVisual);
+        }
+
+        private void OnCollisionEnter(Collision collision)
+        {
+            if (collision == null)
+            {
+                return;
+            }
+
+            float damage = EvaluateCollisionHealthDamage(
+                collision.relativeVelocity.magnitude,
+                severeCollisionSpeed,
+                collisionHealthDamagePerMeterPerSecond);
+            if (damage <= 0f)
+            {
+                return;
+            }
+
+            ApplyConditionWear(damage, damage * 0.25f);
         }
 
         public void SetInput(float steering, float throttle, float brake)
@@ -136,6 +181,111 @@ namespace BeyondTheBeat.Vehicle
             ApplyWheelTuning();
         }
 
+        public void SetOffRoadState(bool active)
+        {
+            offRoadSurfaceActive = active;
+        }
+
+        public bool RestoreCondition(float health, float wear)
+        {
+            return SetConditionInternal(health, wear);
+        }
+
+        public bool ApplyConditionWear(float healthDamage, float tireWearAmount)
+        {
+            if (healthDamage <= 0f && tireWearAmount <= 0f)
+            {
+                return false;
+            }
+
+            return SetConditionInternal(
+                HealthCondition - Mathf.Max(0f, healthDamage),
+                TireWear + Mathf.Max(0f, tireWearAmount));
+        }
+
+        public bool RepairCondition(float healthRestore, float tireWearReduction)
+        {
+            if (healthRestore <= 0f && tireWearReduction <= 0f)
+            {
+                return false;
+            }
+
+            return SetConditionInternal(
+                HealthCondition + Mathf.Max(0f, healthRestore),
+                TireWear - Mathf.Max(0f, tireWearReduction));
+        }
+
+        public static float EvaluateAccelerationMultiplier(float health)
+        {
+            return Mathf.Lerp(0.55f, 1f, Mathf.Clamp01(health));
+        }
+
+        public static float EvaluateBrakeMultiplier(float health, float wear)
+        {
+            float healthFactor = Mathf.Lerp(0.7f, 1f, Mathf.Clamp01(health));
+            float tireFactor = Mathf.Lerp(1f, 0.72f, Mathf.Clamp01(wear));
+            return Mathf.Clamp(healthFactor * tireFactor, 0.5f, 1f);
+        }
+
+        public static float EvaluateTractionMultiplier(float wear)
+        {
+            return Mathf.Lerp(1f, 0.55f, Mathf.Clamp01(wear));
+        }
+
+        public static float EvaluateOffRoadWearIntensity(float speedKph, float wearStartSpeedKph)
+        {
+            if (speedKph <= wearStartSpeedKph)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp01((speedKph - wearStartSpeedKph) / 60f);
+        }
+
+        public static float EvaluateCollisionHealthDamage(float impactSpeed, float threshold, float damagePerSpeed)
+        {
+            if (impactSpeed <= threshold || damagePerSpeed <= 0f)
+            {
+                return 0f;
+            }
+
+            return Mathf.Clamp01((impactSpeed - threshold) * damagePerSpeed);
+        }
+
+        private void ApplyOffRoadWear()
+        {
+            if (!offRoadSurfaceActive || !IsGrounded)
+            {
+                return;
+            }
+
+            float intensity = EvaluateOffRoadWearIntensity(CurrentSpeedKph, offRoadWearStartSpeedKph);
+            if (intensity <= 0f)
+            {
+                return;
+            }
+
+            ApplyConditionWear(
+                offRoadHealthWearPerSecond * intensity * Time.fixedDeltaTime,
+                offRoadTireWearPerSecond * intensity * Time.fixedDeltaTime);
+        }
+
+        private bool SetConditionInternal(float health, float wear)
+        {
+            float nextHealth = Mathf.Clamp01(health);
+            float nextWear = Mathf.Clamp01(wear);
+            if (Mathf.Approximately(nextHealth, HealthCondition) && Mathf.Approximately(nextWear, TireWear))
+            {
+                return false;
+            }
+
+            healthCondition = nextHealth;
+            tireWear = nextWear;
+            ApplyDynamicWheelFriction();
+            ConditionChanged?.Invoke(this, HealthCondition, TireWear);
+            return true;
+        }
+
         private void ApplySteering()
         {
             float reductionBlend;
@@ -152,7 +302,11 @@ namespace BeyondTheBeat.Vehicle
             }
 
             float steerMultiplier = Mathf.Lerp(1f, highSpeedSteerMultiplier, reductionBlend);
-            float targetSteerAngle = steeringInput * maxSteerAngle * steerMultiplier;
+            float entityDriftSeed = GetEntityId().GetHashCode() * 0.01f;
+            float wearDrift = Mathf.Sin(Time.fixedTime * 1.7f + entityDriftSeed) *
+                              maxSteeringDriftDegrees * TireWear;
+            float targetSteerAngle = steeringInput * maxSteerAngle * steerMultiplier + wearDrift;
+            targetSteerAngle = Mathf.Clamp(targetSteerAngle, -maxSteerAngle, maxSteerAngle);
             currentSteerAngle = Mathf.MoveTowards(
                 currentSteerAngle,
                 targetSteerAngle,
@@ -173,7 +327,8 @@ namespace BeyondTheBeat.Vehicle
                 (requestingForward && movingBackward) ||
                 (requestingReverse && movingForward);
 
-            float appliedBrakeTorque = brakeInput * brakeTorque;
+            float effectiveBrakeTorque = brakeTorque * EffectiveBrakeMultiplier;
+            float appliedBrakeTorque = brakeInput * effectiveBrakeTorque;
             float requestedAxleTorque = 0f;
 
             if (brakeInput > 0.01f)
@@ -182,18 +337,19 @@ namespace BeyondTheBeat.Vehicle
             }
             else if (changingDirection)
             {
-                appliedBrakeTorque = Mathf.Max(appliedBrakeTorque, directionChangeBrakeTorque);
+                appliedBrakeTorque = Mathf.Max(
+                    appliedBrakeTorque,
+                    directionChangeBrakeTorque * EffectiveBrakeMultiplier);
             }
             else if (requestingForward && CurrentSpeedKph < maxForwardSpeedKph)
             {
-                requestedAxleTorque = throttleInput * motorTorque;
+                requestedAxleTorque = throttleInput * motorTorque * EffectiveAccelerationMultiplier;
             }
             else if (requestingReverse && CurrentSpeedKph < maxReverseSpeedKph)
             {
-                requestedAxleTorque = throttleInput * motorTorque;
+                requestedAxleTorque = throttleInput * motorTorque * EffectiveAccelerationMultiplier;
             }
 
-            // Rear-wheel drive keeps the prototype easy to reason about while the front wheels steer.
             float torquePerDrivenWheel = requestedAxleTorque * 0.5f;
             rearLeftCollider.motorTorque = torquePerDrivenWheel;
             rearRightCollider.motorTorque = torquePerDrivenWheel;
@@ -220,8 +376,8 @@ namespace BeyondTheBeat.Vehicle
         private void ApplyChassisTuning()
         {
             body.mass = vehicleMass;
-            body.drag = linearDrag;
-            body.angularDrag = angularDrag;
+            body.linearDamping = linearDrag;
+            body.angularDamping = angularDrag;
             body.centerOfMass = centerOfMassOffset;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
@@ -258,12 +414,32 @@ namespace BeyondTheBeat.Vehicle
             spring.targetPosition = suspensionTargetPosition;
             wheel.suspensionSpring = spring;
 
+            ApplyWheelFriction(wheel);
+        }
+
+        private void ApplyDynamicWheelFriction()
+        {
+            if (!HasRequiredWheelReferences())
+            {
+                return;
+            }
+
+            ApplyWheelFriction(frontLeftCollider);
+            ApplyWheelFriction(frontRightCollider);
+            ApplyWheelFriction(rearLeftCollider);
+            ApplyWheelFriction(rearRightCollider);
+        }
+
+        private void ApplyWheelFriction(WheelCollider wheel)
+        {
+            float traction = EffectiveTractionMultiplier;
+
             WheelFrictionCurve forwardFriction = wheel.forwardFriction;
-            forwardFriction.stiffness = forwardFrictionStiffness;
+            forwardFriction.stiffness = forwardFrictionStiffness * traction;
             wheel.forwardFriction = forwardFriction;
 
             WheelFrictionCurve sidewaysFriction = wheel.sidewaysFriction;
-            sidewaysFriction.stiffness = sidewaysFrictionStiffness;
+            sidewaysFriction.stiffness = sidewaysFrictionStiffness * traction;
             wheel.sidewaysFriction = sidewaysFriction;
         }
 
