@@ -302,7 +302,7 @@ namespace BeyondTheBeat.Vehicle
             }
 
             float steerMultiplier = Mathf.Lerp(1f, highSpeedSteerMultiplier, reductionBlend);
-            float wearDrift = Mathf.Sin(Time.fixedTime * 1.7f + GetInstanceID() * 0.01f) *
+            float wearDrift = Mathf.Sin(Time.fixedTime * 1.7f + GetEntityId() * 0.01f) *
                               maxSteeringDriftDegrees * TireWear;
             float targetSteerAngle = steeringInput * maxSteerAngle * steerMultiplier + wearDrift;
             targetSteerAngle = Mathf.Clamp(targetSteerAngle, -maxSteerAngle, maxSteerAngle);
@@ -375,8 +375,8 @@ namespace BeyondTheBeat.Vehicle
         private void ApplyChassisTuning()
         {
             body.mass = vehicleMass;
-            body.drag = linearDrag;
-            body.angularDrag = angularDrag;
+            body.linearDamping = linearDrag;
+            body.angularDamping = angularDrag;
             body.centerOfMass = centerOfMassOffset;
             body.interpolation = RigidbodyInterpolation.Interpolate;
             body.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
