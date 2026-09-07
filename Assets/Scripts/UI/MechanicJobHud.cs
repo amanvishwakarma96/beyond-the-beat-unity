@@ -1,7 +1,7 @@
 using BeyondTheBeat.Economy;
 using BeyondTheBeat.Jobs;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeyondTheBeat.UI
 {
@@ -10,14 +10,14 @@ namespace BeyondTheBeat.UI
         [SerializeField] private MechanicJobManager jobManager;
         [SerializeField] private CreditWallet wallet;
         [SerializeField] private GameObject panelRoot;
-        [SerializeField] private Text jobText;
-        [SerializeField] private Text creditsText;
+        [SerializeField] private TMP_Text jobText;
+        [SerializeField] private TMP_Text creditsText;
 
         public MechanicJobManager JobManager => jobManager;
         public CreditWallet Wallet => wallet;
         public GameObject PanelRoot => panelRoot;
-        public Text JobText => jobText;
-        public Text CreditsText => creditsText;
+        public TMP_Text JobText => jobText;
+        public TMP_Text CreditsText => creditsText;
 
         private void OnEnable()
         {
