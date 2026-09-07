@@ -302,7 +302,8 @@ namespace BeyondTheBeat.Vehicle
             }
 
             float steerMultiplier = Mathf.Lerp(1f, highSpeedSteerMultiplier, reductionBlend);
-            float wearDrift = Mathf.Sin(Time.fixedTime * 1.7f + GetEntityId() * 0.01f) *
+            float entityDriftSeed = GetEntityId().GetHashCode() * 0.01f;
+            float wearDrift = Mathf.Sin(Time.fixedTime * 1.7f + entityDriftSeed) *
                               maxSteeringDriftDegrees * TireWear;
             float targetSteerAngle = steeringInput * maxSteerAngle * steerMultiplier + wearDrift;
             targetSteerAngle = Mathf.Clamp(targetSteerAngle, -maxSteerAngle, maxSteerAngle);
