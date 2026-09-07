@@ -13,11 +13,13 @@ namespace BeyondTheBeat.UI
         [Header("Interaction Prompt")]
         [SerializeField] private GameObject promptRoot;
         [SerializeField] private TMP_Text promptText;
+        [SerializeField] private HudPanel promptPanel;
         [SerializeField] private string promptPrefix = "ACTION / E  •  ";
 
         [Header("Feedback")]
         [SerializeField] private GameObject feedbackRoot;
         [SerializeField] private TMP_Text feedbackText;
+        [SerializeField] private HudPanel feedbackPanel;
         [SerializeField, Min(0.25f)] private float feedbackDuration = 2f;
 
         private float feedbackRemaining;
@@ -69,18 +71,14 @@ namespace BeyondTheBeat.UI
             }
 
             feedbackText.text = message;
-            feedbackRoot.SetActive(true);
+            SetVisible(feedbackPanel, feedbackRoot, true);
             feedbackRemaining = feedbackDuration;
         }
 
         public void HideFeedback()
         {
             feedbackRemaining = 0f;
-
-            if (feedbackRoot != null)
-            {
-                feedbackRoot.SetActive(false);
-            }
+            SetVisible(feedbackPanel, feedbackRoot, false);
         }
 
         private void Subscribe()
@@ -128,12 +126,11 @@ namespace BeyondTheBeat.UI
             }
 
             bool show = visible && !string.IsNullOrWhiteSpace(message);
-            promptRoot.SetActive(show);
-
             if (show)
             {
                 promptText.text = promptPrefix + message;
             }
+            SetVisible(promptPanel, promptRoot, show);
         }
 
         private void HandleParkingCompleted(ParkingZone zone, GameObject actor)
@@ -141,6 +138,27 @@ namespace BeyondTheBeat.UI
             if (zone != null)
             {
                 ShowFeedback(zone.SuccessMessage);
+            }
+        }
+
+        private static void SetVisible(HudPanel panel, GameObject fallbackRoot, bool visible)
+        {
+            if (panel != null)
+            {
+                if (visible)
+                {
+                    panel.Show();
+                }
+                else
+                {
+                    panel.Hide();
+                }
+                return;
+            }
+
+            if (fallbackRoot != null)
+            {
+                fallbackRoot.SetActive(visible);
             }
         }
     }
