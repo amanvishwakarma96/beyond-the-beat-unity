@@ -10,6 +10,7 @@ namespace BeyondTheBeat.UI
         [SerializeField] private MechanicJobManager jobManager;
         [SerializeField] private CreditWallet wallet;
         [SerializeField] private GameObject panelRoot;
+        [SerializeField] private HudPanel panel;
         [SerializeField] private TMP_Text jobText;
         [SerializeField] private TMP_Text creditsText;
 
@@ -51,8 +52,9 @@ namespace BeyondTheBeat.UI
                 return;
             }
 
-            panelRoot.SetActive(jobManager != null && wallet != null);
-            if (!panelRoot.activeSelf)
+            bool visible = jobManager != null && wallet != null;
+            SetPanelVisible(visible);
+            if (!visible)
             {
                 return;
             }
@@ -124,6 +126,30 @@ namespace BeyondTheBeat.UI
         private void HandleBalanceChanged(CreditWallet source, int previous, int current)
         {
             Refresh();
+        }
+
+        private void SetPanelVisible(bool visible)
+        {
+            if (panel == null && panelRoot != null)
+            {
+                panel = panelRoot.GetComponent<HudPanel>();
+            }
+
+            if (panel != null)
+            {
+                if (visible)
+                {
+                    panel.Show();
+                }
+                else
+                {
+                    panel.Hide();
+                }
+            }
+            else
+            {
+                panelRoot.SetActive(visible);
+            }
         }
     }
 }
