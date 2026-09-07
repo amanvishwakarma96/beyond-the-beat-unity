@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "lanes": [
+    {
+      "id": "legacy-entry-api30",
+      "displayName": "Legacy / entry physical phone",
+      "apiLevel": 30,
+      "androidVersion": "Android 11",
+      "ramClassGb": 4,
+      "screenClass": "720p-class landscape phone",
+      "cutoutCoverage": "No cutout or simple notch acceptable",
+      "physicalRequired": true,
+      "purpose": "Catch low-memory, older-platform, touch-latency and baseline 30 FPS regressions."
+    },
+    {
+      "id": "mainstream-mid-api33",
+      "displayName": "Mainstream mid-range physical phone",
+      "apiLevel": 33,
+      "androidVersion": "Android 13",
+      "ramClassGb": 6,
+      "screenClass": "1080p-class 60/90 Hz landscape phone",
+      "cutoutCoverage": "Punch-hole or notch preferred",
+      "physicalRequired": true,
+      "purpose": "Primary soft-launch quality lane for controls, safe area, missions, water and sustained performance."
+    },
+    {
+      "id": "current-api36",
+      "displayName": "Current Android physical phone",
+      "apiLevel": 36,
+      "androidVersion": "Android 16",
+      "ramClassGb": 8,
+      "screenClass": "1080p+ high-refresh landscape phone",
+      "cutoutCoverage": "Punch-hole / modern gesture navigation required",
+      "physicalRequired": true,
+      "purpose": "Validate current Google Play target-platform compatibility, cutout behavior and modern Android runtime changes."
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "DM-01-COLD-LAUNCH",
+      "name": "Install and cold launch",
+      "passCriteria": "APK installs, launches from a cold state, reaches gameplay without crash, missing script, black screen or fatal error."
+    },
+    {
+      "id": "DM-02-ONBOARDING",
+      "name": "Tutorial onboarding",
+      "passCriteria": "Steer -> GO -> REV -> ACTION progresses with real touch input; Skip works; completion/skip remains suppressed after relaunch."
+    },
+    {
+      "id": "DM-03-DRIVE-MULTITOUCH",
+      "name": "Driving controls and multitouch",
+      "passCriteria": "LEFT/RIGHT with GO/REV combinations respond consistently with no stuck input, missed release or accidental UI blocking."
+    },
+    {
+      "id": "DM-04-FREE-ROAM-INTERACTIONS",
+      "name": "Parking, cook and repair interactions",
+      "passCriteria": "Parking, cooking and repair start/complete/cancel correctly through the shared ACTION interaction path."
+    },
+    {
+      "id": "DM-05-MECHANIC-JOB",
+      "name": "Mechanic job and credits",
+      "passCriteria": "Mechanic job completes once, awards the expected credits once, and HUD remains readable/non-blocking."
+    },
+    {
+      "id": "DM-06-MISSIONS-SAVE",
+      "name": "Mission progression and save/relaunch",
+      "passCriteria": "Reach/exploration progression completes and persisted progress restores correctly after force-close and relaunch."
+    },
+    {
+      "id": "DM-07-FOREST-SURVIVAL",
+      "name": "Forest survival",
+      "passCriteria": "Forest context activates/resets correctly and survival state remains playable without new performance or UI regressions."
+    },
+    {
+      "id": "DM-08-RESTRICTED-PUZZLE",
+      "name": "Restricted-area puzzle gate",
+      "passCriteria": "Puzzle reliably blocks/unlocks the gate, supports retry/reset, and integrates with mission completion."
+    },
+    {
+      "id": "DM-09-SWIM-CAMERA",
+      "name": "Swim, dive and camera handoff",
+      "passCriteria": "DRIVE -> SWIM TEST -> DRIVE, SWIM/BACK/DIVE/SURFACE and single-camera target handoff work without stuck controls or camera loss."
+    },
+    {
+      "id": "DM-10-SAFE-AREA-UI",
+      "name": "Safe area and HUD readability",
+      "passCriteria": "Mission/Tutorial/Performance/Mechanic/interaction HUD stays clear of cutouts, rounded corners and gesture navigation with no intentional overlap."
+    },
+    {
+      "id": "DM-11-STORE-SCREENSHOTS",
+      "name": "Real gameplay screenshot capture",
+      "passCriteria": "At least three representative 16:9 landscape gameplay captures can be taken from the real build without debug overlays or misleading fabricated content."
+    },
+    {
+      "id": "DM-12-SOAK-THERMAL",
+      "name": "Sustained play and thermal check",
+      "passCriteria": "At least 15 minutes of mixed driving/interactions/water play completes without crash, severe thermal throttling, runaway memory symptoms or sustained FPS below the accepted device-tier threshold."
+    }
+  ],
+  "releaseGate": {
+    "minimumPhysicalDevices": 3,
+    "minimumManufacturers": 2,
+    "requirePhysicalHardware": true,
+    "emulatorCountsForSignOff": false,
+    "requiredTargetApiLevel": 36,
+    "baselineFps": 30,
+    "stretchFps": 60,
+    "minimumSoakMinutes": 15
+  }
+}

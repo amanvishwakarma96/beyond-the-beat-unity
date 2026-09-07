@@ -84,6 +84,7 @@ jobs:
             "${GITHUB_WORKSPACE}/build/phase6-ci-diagnostics.log" \
             "${GITHUB_WORKSPACE}/build/phase6-build-size-report.txt" \
             "${GITHUB_WORKSPACE}/build/store-assets/STORE-ASSET-MANIFEST.txt" \
+            "${GITHUB_WORKSPACE}/build/device-matrix/DEVICE-MATRIX-STATUS.txt" \
             "${GITHUB_WORKSPACE}/build/phase5-ci-diagnostics.log"; do
             if [[ -f "${DIAGNOSTICS}" ]]; then
               echo "--- ${DIAGNOSTICS} ---"
@@ -100,6 +101,7 @@ jobs:
             build/phase6-ci-diagnostics.log
             build/phase6-build-size-report.txt
             build/store-assets/**
+            build/device-matrix/**
             build/phase5-ci-diagnostics.log
             build/phase4-ci-diagnostics.log
             build/phase3-ci-diagnostics.log
@@ -144,14 +146,37 @@ jobs:
             fi
           done
 
+          DEVICE_MATRIX_DIR="${GITHUB_WORKSPACE}/build/device-matrix"
+          for REQUIRED_MATRIX_FILE in \
+            "DEVICE-MATRIX-TEST-PLAN.md" \
+            "DEVICE-MATRIX-EVIDENCE.csv" \
+            "DEVICE-MATRIX-STATUS.txt"; do
+            if [[ ! -f "${DEVICE_MATRIX_DIR}/${REQUIRED_MATRIX_FILE}" ]]; then
+              echo "::error::Missing generated device-matrix file: ${REQUIRED_MATRIX_FILE}"
+              exit 1
+            fi
+          done
+
+          TARGET_API="$(awk -F= '/^targetApi=/{print $2; exit}' "${DEVICE_MATRIX_DIR}/DEVICE-MATRIX-STATUS.txt")"
+          PHYSICAL_EVIDENCE="$(awk -F= '/^physicalEvidence=/{print $2; exit}' "${DEVICE_MATRIX_DIR}/DEVICE-MATRIX-STATUS.txt")"
+          if [[ "${TARGET_API}" != "36" ]]; then
+            echo "::error::Current Google Play readiness gate requires target API 36; device-matrix status reported '${TARGET_API}'."
+            exit 1
+          fi
+          if [[ "${PHYSICAL_EVIDENCE}" != "PENDING" ]]; then
+            echo "::error::Fresh CI-generated device matrix must start with physical evidence PENDING, not '${PHYSICAL_EVIDENCE}'."
+            exit 1
+          fi
+
           STAGE_DIR="${GITHUB_WORKSPACE}/artifact/TestThisBuild"
           rm -rf "${STAGE_DIR}"
-          mkdir -p "${STAGE_DIR}/STORE-ASSETS"
+          mkdir -p "${STAGE_DIR}/STORE-ASSETS" "${STAGE_DIR}/DEVICE-MATRIX"
           APK_FILE="BeyondTheBeat-TEST-${GITHUB_RUN_NUMBER}.apk"
           STAGED_APK="${STAGE_DIR}/${APK_FILE}"
           cp "${APK_PATH}" "${STAGED_APK}"
           cp "${SIZE_REPORT}" "${STAGE_DIR}/BUILD-SIZE-REPORT.txt"
           cp -R "${STORE_ASSETS_DIR}/." "${STAGE_DIR}/STORE-ASSETS/"
+          cp -R "${DEVICE_MATRIX_DIR}/." "${STAGE_DIR}/DEVICE-MATRIX/"
 
           BUDGET_ASSET="${GITHUB_WORKSPACE}/Assets/Settings/Performance/Phase6_MobilePerformanceBudget.asset"
           if [[ ! -f "${BUDGET_ASSET}" ]]; then
@@ -189,6 +214,7 @@ jobs:
           Source commit: ${SOURCE_SHA}
           SHA-256: ${APK_SHA256}
           APK size: ${APK_MB} MB / ${MAX_APK_MB} MB ceiling
+          Target SDK: Android 16 / API ${TARGET_API}
           Unity BuildReport size: ${BUILD_REPORT_MB:-unknown} MiB
           Managed stripping: ${MANAGED_STRIPPING:-unknown}
           Android architectures: ${ANDROID_ARCHS:-unknown}
@@ -197,21 +223,22 @@ jobs:
 
           This is the ONLY APK intended for current device testing.
           STORE-ASSETS/ contains the current Play icon, feature graphic, listing draft and screenshot capture requirements.
-          CI success is not physical Android or store-publishing sign-off.
+          DEVICE-MATRIX/ contains the required physical test plan and 36 PENDING evidence rows (3 lanes x 12 scenarios).
+          CI success is not physical Android, device-matrix, or store-publishing sign-off.
 
-          Phase 6 STORE ASSETS + UI POLISH priorities:
-          1. Clean-install and cold-launch the APK; verify the generated launcher icon is visible and no stripping/missing-script startup failure occurs.
-          2. Review STORE-ASSETS/play-store-icon-512.png at full size and launcher size; confirm the road + beat mark remains recognizable and contains no misleading badge/text.
-          3. Review STORE-ASSETS/feature-graphic-1024x500.png; confirm it is visually consistent with the game and is brand artwork, not fake gameplay.
-          4. Review STORE-ASSETS/PLAY-STORE-LISTING.md for factual accuracy against the current build.
-          5. Capture REAL Android gameplay screenshots following STORE-ASSETS/SCREENSHOT-CAPTURE-REQUIRED.txt; minimum 2, target at least 3 landscape 16:9 screenshots at 1920x1080+.
-          6. Record device resolution/aspect ratio and confirm Mission/Tutorial/Performance/Mechanic HUD content stays clear of notch, punch-hole, rounded corners and gesture/navigation insets.
-          7. Complete Steer -> GO -> REV -> ACTION and confirm LEFT/RIGHT/GO/REV/ACTION touch behavior remains correct.
-          8. Confirm DRIVE -> SWIM TEST -> DRIVE, SWIM/BACK/DIVE/SURFACE and camera handoff still work.
-          9. Complete Exploration 0/3 -> 3/3 and verify save/relaunch restore; regression-check Parking, Cook, Repair, Mechanic Job, survival and restricted puzzle/gate flow.
-          10. Confirm the development performance overlay still samples and record FPS/frame-time/thermal behavior.
-          11. Review BUILD-SIZE-REPORT.txt and confirm APK package size remains <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
-          12. CI GREEN IS NOT STORE OR DEVICE SIGN-OFF: real screenshots, broader device testing, Play Console review and final release-candidate validation are still required.
+          Phase 6 DEVICE MATRIX + STORE priorities:
+          1. Open DEVICE-MATRIX/DEVICE-MATRIX-TEST-PLAN.md and assign real devices for legacy/API30, mainstream/API33 and current/API36 lanes.
+          2. Use at least 3 physical phones across at least 2 manufacturers; emulator-only evidence does NOT count for sign-off.
+          3. For every lane, complete all 12 DM scenarios and update DEVICE-MATRIX/DEVICE-MATRIX-EVIDENCE.csv from PENDING to PASS/FAIL with device/test evidence.
+          4. Clean-install and cold-launch; verify the generated launcher icon is visible and no stripping/missing-script startup failure occurs.
+          5. Complete Steer -> GO -> REV -> ACTION, LEFT/RIGHT/GO/REV/ACTION multitouch, Parking/Cook/Repair/Mechanic Job, mission/save, forest survival and restricted puzzle flows.
+          6. Confirm DRIVE -> SWIM TEST -> DRIVE, SWIM/BACK/DIVE/SURFACE and camera handoff still work.
+          7. Record resolution/aspect/cutout/navigation details and verify Mission/Tutorial/Performance/Mechanic/interaction HUD safe-area readability.
+          8. Run at least a 15-minute mixed gameplay soak; record FPS/frame-time and thermal observations, especially on the mainstream mid-range lane.
+          9. Capture REAL gameplay screenshots following STORE-ASSETS/SCREENSHOT-CAPTURE-REQUIRED.txt; minimum 2, target at least 3 landscape 16:9 captures at 1920x1080+.
+          10. Review STORE-ASSETS/PLAY-STORE-LISTING.md for factual accuracy and BUILD-SIZE-REPORT.txt for size regressions.
+          11. APK package size must remain <= ${MAX_APK_MB} MB; this build is ${APK_MB} MB.
+          12. CI GREEN IS NOT DEVICE-MATRIX SIGN-OFF: the next release-candidate milestone is blocked until physical evidence is complete.
           EOF
 
           {
@@ -220,9 +247,11 @@ jobs:
             echo "sha256=${APK_SHA256}"
             echo "apk_size_mb=${APK_MB}"
             echo "apk_limit_mb=${MAX_APK_MB}"
+            echo "target_api=${TARGET_API}"
             echo "build_report_mb=${BUILD_REPORT_MB:-unknown}"
             echo "managed_stripping=${MANAGED_STRIPPING:-unknown}"
             echo "store_assets_path=artifact/TestThisBuild/STORE-ASSETS"
+            echo "device_matrix_path=artifact/TestThisBuild/DEVICE-MATRIX"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Upload TEST THIS BUILD APK
@@ -235,6 +264,7 @@ jobs:
             artifact/TestThisBuild/SHA256SUMS.txt
             artifact/TestThisBuild/BUILD-SIZE-REPORT.txt
             artifact/TestThisBuild/STORE-ASSETS/**
+            artifact/TestThisBuild/DEVICE-MATRIX/**
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
@@ -247,7 +277,9 @@ jobs:
             echo
             echo "- Artifact: **${{ steps.manifest.outputs.artifact_name }}**"
             echo "- APK: **${{ steps.manifest.outputs.apk_path }}**"
+            echo "- Target SDK: **Android 16 / API ${{ steps.manifest.outputs.target_api }}**"
             echo "- Store assets: **${{ steps.manifest.outputs.store_assets_path }}**"
+            echo "- Device matrix: **${{ steps.manifest.outputs.device_matrix_path }}**"
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- SHA-256: \`${{ steps.manifest.outputs.sha256 }}\`"
             echo "- APK size: **${{ steps.manifest.outputs.apk_size_mb }} MB / ${{ steps.manifest.outputs.apk_limit_mb }} MB**"
@@ -255,6 +287,6 @@ jobs:
             echo "- Managed stripping: **${{ steps.manifest.outputs.managed_stripping }}**"
             echo
             echo "This workflow starts automatically when changes land on main, including PR merge commits, and can also be started manually."
-            echo "It performs Phase 5 regression, Phase 6 performance + quality + onboarding + UI polish + store asset generation + stripping/build-size optimization, Android Player build and the 200 MB APK gate."
-            echo "The store package includes icon/feature artwork and listing copy, but real gameplay screenshots, broader device-matrix testing and final Play Console/release-candidate acceptance remain mandatory."
+            echo "It performs Phase 5 regression, Phase 6 performance + quality + onboarding + UI polish + store asset generation + Android API 36/device-matrix preparation + stripping/build-size optimization, Android Player build and the 200 MB APK gate."
+            echo "DEVICE-MATRIX evidence is intentionally PENDING after CI generation. Physical testing on >=3 phones / >=2 OEMs is mandatory before the final release-candidate gate."
           } >> "${GITHUB_STEP_SUMMARY}"

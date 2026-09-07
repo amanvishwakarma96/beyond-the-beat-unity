@@ -49,6 +49,11 @@ namespace BeyondTheBeat.Editor
                 Phase6StoreAssetsBuilder.PrepareAndValidateOrThrow();
                 AppendDiagnostic("Phase 6 store assets PASS: Play icon, feature graphic, Android launcher icons, listing copy and real-screenshot capture boundary generated/validated.");
 
+                Phase6DeviceMatrixBuilder.PrepareAndValidateOrThrow();
+                AppendDiagnostic(
+                    $"Phase 6 device-matrix/API 36 readiness PASS: targetSdk={PlayerSettings.Android.targetSdkVersion}; " +
+                    "API 30/33/36 physical lanes and pending evidence package prepared. Physical device sign-off remains required.");
+
                 MobileBuildOptimizationProfile buildProfile = Phase6BuildSizeBuilder.PrepareAndValidateOrThrow();
                 AppendDiagnostic(
                     $"Phase 6 build-size optimization PASS. stripEngine={buildProfile.StripEngineCode}, " +
@@ -58,8 +63,8 @@ namespace BeyondTheBeat.Editor
                 EnsureSceneBuildSettings();
                 BuildDevelopmentAndroidApk(buildProfile);
                 AppendDiagnostic(
-                    "BuildAndroid PASS. Phase 6 performance + render-quality + tutorial/onboarding + mobile HUD polish + store assets + build-size optimization is packaged; " +
-                    "physical screenshots/store review/device-matrix/safe-area/readability/touch/install/FPS/thermal/battery validation remains required.");
+                    "BuildAndroid PASS. Phase 6 performance + render-quality + tutorial/onboarding + mobile HUD polish + store assets + API 36 device-matrix readiness + build-size optimization is packaged; " +
+                    "physical screenshots/device-matrix/safe-area/readability/touch/install/FPS/thermal/battery validation remains required.");
             }
             catch (Exception exception)
             {
@@ -106,6 +111,8 @@ namespace BeyondTheBeat.Editor
             EditorUserBuildSettings.buildAppBundle = false;
             PlayerSettings.Android.useCustomKeystore = false;
 
+            Phase6DeviceMatrixBuilder.ValidateTargetSdkOrThrow();
+
             BuildPlayerOptions options = new BuildPlayerOptions
             {
                 scenes = new[] { ScenePath },
@@ -115,7 +122,7 @@ namespace BeyondTheBeat.Editor
             };
 
             AppendDiagnostic(
-                $"Android BuildPipeline START. output={outputPath}, options={options.options}, " +
+                $"Android BuildPipeline START. output={outputPath}, options={options.options}, targetSdk={PlayerSettings.Android.targetSdkVersion}, " +
                 $"stripEngine={PlayerSettings.stripEngineCode}, " +
                 $"managed={PlayerSettings.GetManagedStrippingLevel(BuildTargetGroup.Android)}, " +
                 $"architectures={PlayerSettings.Android.targetArchitectures}.");
