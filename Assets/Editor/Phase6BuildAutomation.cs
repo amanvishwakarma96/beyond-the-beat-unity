@@ -46,6 +46,9 @@ namespace BeyondTheBeat.Editor
                 Phase6UiPolishBuilder.ValidateMobileHudPolishOrThrow();
                 AppendDiagnostic("Phase 6 mobile HUD polish PASS: safe-area fitting, overlay separation, touch-safe presentation and inherited input ownership validated.");
 
+                Phase6StoreAssetsBuilder.PrepareAndValidateOrThrow();
+                AppendDiagnostic("Phase 6 store assets PASS: Play icon, feature graphic, Android launcher icons, listing copy and real-screenshot capture boundary generated/validated.");
+
                 MobileBuildOptimizationProfile buildProfile = Phase6BuildSizeBuilder.PrepareAndValidateOrThrow();
                 AppendDiagnostic(
                     $"Phase 6 build-size optimization PASS. stripEngine={buildProfile.StripEngineCode}, " +
@@ -55,8 +58,8 @@ namespace BeyondTheBeat.Editor
                 EnsureSceneBuildSettings();
                 BuildDevelopmentAndroidApk(buildProfile);
                 AppendDiagnostic(
-                    "BuildAndroid PASS. Phase 6 performance + render-quality + tutorial/onboarding + mobile HUD polish + build-size optimization is packaged; " +
-                    "physical safe-area/readability/touch/install/FPS/thermal/battery validation remains required.");
+                    "BuildAndroid PASS. Phase 6 performance + render-quality + tutorial/onboarding + mobile HUD polish + store assets + build-size optimization is packaged; " +
+                    "physical screenshots/store review/device-matrix/safe-area/readability/touch/install/FPS/thermal/battery validation remains required.");
             }
             catch (Exception exception)
             {
