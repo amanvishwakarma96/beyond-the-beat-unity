@@ -56,7 +56,7 @@ namespace BeyondTheBeat.UI
                 return;
             }
 
-            Canvas canvas = UnityEngine.Object.FindFirstObjectByType<Canvas>();
+            Canvas canvas = UnityEngine.Object.FindAnyObjectByType<Canvas>();
             if (canvas == null)
             {
                 Debug.LogWarning("[Beyond The Beat] Phase 0 validation overlay skipped because no Canvas was found.");
@@ -102,8 +102,8 @@ namespace BeyondTheBeat.UI
 
             Phase0ValidationOverlay overlay = root.GetComponent<Phase0ValidationOverlay>();
             overlay.displayText = text;
-            overlay.vehicleController = UnityEngine.Object.FindFirstObjectByType<VehicleController>();
-            overlay.cameraFollow = UnityEngine.Object.FindFirstObjectByType<CameraFollow>();
+            overlay.vehicleController = UnityEngine.Object.FindAnyObjectByType<VehicleController>();
+            overlay.cameraFollow = UnityEngine.Object.FindAnyObjectByType<CameraFollow>();
 
             root.transform.SetAsLastSibling();
         }
