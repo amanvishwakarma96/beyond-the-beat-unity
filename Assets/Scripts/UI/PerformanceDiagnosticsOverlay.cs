@@ -1,6 +1,6 @@
 using BeyondTheBeat.Performance;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeyondTheBeat.UI
 {
@@ -8,10 +8,10 @@ namespace BeyondTheBeat.UI
     public sealed class PerformanceDiagnosticsOverlay : MonoBehaviour
     {
         [SerializeField] private MobilePerformanceMonitor monitor;
-        [SerializeField] private Text metricsText;
+        [SerializeField] private TMP_Text metricsText;
 
         public MobilePerformanceMonitor Monitor => monitor;
-        public Text MetricsText => metricsText;
+        public TMP_Text MetricsText => metricsText;
 
         private void Awake()
         {
