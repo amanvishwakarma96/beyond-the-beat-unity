@@ -101,5 +101,11 @@ namespace BeyondTheBeat.Persistence
         // and an empty checkpoint array; existing mission types are unaffected.
         public bool HasPhase5ExplorationState;
         public string[] MissionVisitedExplorationZoneIds = Array.Empty<string>();
+
+        // Additive Phase 7 vehicle-condition fields. Older saves keep this flag false so the
+        // vehicle falls back to a healthy engine/new tires instead of interpreting zeroed JSON fields as damage.
+        public bool HasPhase7VehicleConditionState;
+        public float VehicleHealthCondition = 1f;
+        public float VehicleTireWear;
     }
 }

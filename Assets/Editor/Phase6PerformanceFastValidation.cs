@@ -92,8 +92,11 @@ namespace BeyondTheBeat.Editor
             string fast = File.ReadAllText(fastPath);
             string full = File.ReadAllText(fullPath);
             string doc = File.ReadAllText(docPath);
+            bool currentFastEntry =
+                fast.Contains("BeyondTheBeat.Editor.Phase6PerformanceFastValidation.Validate", StringComparison.Ordinal) ||
+                fast.Contains("BeyondTheBeat.Editor.Phase7IntegrationFastValidation.Validate", StringComparison.Ordinal);
 
-            return fast.Contains("BeyondTheBeat.Editor.Phase6PerformanceFastValidation.Validate", StringComparison.Ordinal) &&
+            return currentFastEntry &&
                    fast.Contains("pull_request:", StringComparison.Ordinal) &&
                    !fast.Contains("androidExportType: androidPackage", StringComparison.Ordinal) &&
                    full.Contains("BeyondTheBeat.Editor.Phase6BuildAutomation.BuildAndroid", StringComparison.Ordinal) &&

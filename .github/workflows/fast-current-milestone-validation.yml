@@ -71,7 +71,7 @@ jobs:
         with:
           targetPlatform: Android
           unityVersion: auto
-          buildMethod: BeyondTheBeat.Editor.Phase6PerformanceFastValidation.Validate
+          buildMethod: BeyondTheBeat.Editor.Phase7IntegrationFastValidation.Validate
           buildsPath: build/fast-validation
           allowDirtyBuild: true
 
@@ -80,37 +80,24 @@ jobs:
         shell: bash
         run: |
           {
-            echo "# Fast Phase 6 Optimization + Onboarding + UI + Store + Device Matrix Validation"
+            echo "# Fast Phase 7 Systemic Integration Validation"
             echo
             echo "- Source commit: \`${SOURCE_SHA}\`"
             echo "- Unity script compilation: **PASS**"
-            echo "- Phase 5 gameplay contracts: **PASS**"
-            echo "- Performance budget / sampled diagnostics: **PASS**"
-            echo "- Mobile render-quality profile: **PASS**"
-            echo "- Engine / managed stripping policy: **PASS**"
-            echo "- LZ4HC build-option composition: **PASS**"
-            echo "- BuildReport size diagnostics code: **PASS**"
-            echo "- Tutorial ordered control progression: **PASS**"
-            echo "- Tutorial wrong-input rejection / Skip behavior: **PASS**"
-            echo "- Tutorial HUD no-Update presentation contract: **PASS**"
-            echo "- Safe-area anchor mapping / fallback: **PASS**"
-            echo "- Safe-area fitter no-Update contract: **PASS**"
-            echo "- Reference Mission/Tutorial/Performance/Mechanic layout separation: **PASS**"
-            echo "- Play Store icon / feature-graphic dimensions: **PASS**"
-            echo "- Deterministic store-brand renderer: **PASS**"
-            echo "- Listing title / <=80 character short-description contract: **PASS**"
-            echo "- Real-gameplay screenshot capture boundary: **PASS**"
-            echo "- Android API 30 / 33 / 36 device lanes: **PASS**"
-            echo "- >=3 physical devices / >=2 OEM release gate: **PASS**"
-            echo "- Emulator cannot satisfy physical sign-off: **PASS**"
-            echo "- Android 16 / API 36 Unity target capability: **PASS**"
-            echo "- 12 stable device-matrix scenarios + evidence schema: **PASS**"
-            echo "- Historical scene rebuild: **NOT RUN**"
-            echo "- Store PNG file generation: **NOT RUN in PR validation**"
-            echo "- Device-matrix evidence generation: **NOT RUN in PR validation**"
+            echo "- All inherited Phase 5/6 fast contracts: **PASS**"
+            echo "- Vehicle health acceleration degradation: **PASS**"
+            echo "- Health/tire braking degradation: **PASS**"
+            echo "- Tire traction degradation: **PASS**"
+            echo "- High-speed off-road wear threshold math: **PASS**"
+            echo "- Severe collision damage threshold math: **PASS**"
+            echo "- Repair quote calculation: **PASS**"
+            echo "- Insufficient-credit partial repair: **PASS**"
+            echo "- Full repair credit deduction / completion event: **PASS**"
+            echo "- Phase 7 save/load round trip: **PASS**"
+            echo "- Older-save healthy/new-tire fallback: **PASS**"
             echo "- Android APK packaging: **NOT RUN in PR validation**"
+            echo "- Physical handling/balance validation: **NOT RUN in PR validation**"
             echo
-            echo "The full **Current Android Test Build** starts automatically after the PR is merged to main and can also be run manually."
-            echo "It will target Android 16/API 36, generate the store package plus DEVICE-MATRIX plan/evidence/status files, and include them inside the single TEST-THIS-BUILD artifact next to the APK."
-            echo "Every physical matrix result starts PENDING. CI/emulators do not count as device sign-off; real phones are still required."
+            echo "After merge, the existing Current Android Test Build rebuilds the integrated scene, applies Phase 7 wear/economy/HUD wiring, and packages the current Android test APK."
+            echo "CI proves deterministic contracts only; real-device steering drift, brake feel, repair balance and HUD readability still require physical validation."
           } >> "${GITHUB_STEP_SUMMARY}"

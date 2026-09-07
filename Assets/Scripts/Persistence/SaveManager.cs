@@ -32,6 +32,8 @@ namespace BeyondTheBeat.Persistence
                 return false;
             }
 
+            NormalizeAdditiveState(data);
+
             string path = SavePath;
             string tempPath = path + ".tmp";
 
@@ -118,6 +120,10 @@ namespace BeyondTheBeat.Persistence
 
         public static string SerializeForStorage(GameSaveData data)
         {
+            if (data != null)
+            {
+                NormalizeAdditiveState(data);
+            }
             return JsonUtility.ToJson(data, true);
         }
 
@@ -147,6 +153,7 @@ namespace BeyondTheBeat.Persistence
                     return SaveLoadResult.Corrupt;
                 }
 
+                NormalizeAdditiveState(parsed);
                 data = parsed;
                 return SaveLoadResult.Success;
             }
@@ -154,6 +161,24 @@ namespace BeyondTheBeat.Persistence
             {
                 return SaveLoadResult.Corrupt;
             }
+        }
+
+        public static void NormalizeAdditiveState(GameSaveData data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+
+            if (!data.HasPhase7VehicleConditionState)
+            {
+                data.VehicleHealthCondition = 1f;
+                data.VehicleTireWear = 0f;
+                return;
+            }
+
+            data.VehicleHealthCondition = Mathf.Clamp01(data.VehicleHealthCondition);
+            data.VehicleTireWear = Mathf.Clamp01(data.VehicleTireWear);
         }
 
         private static void TryDelete(string path)

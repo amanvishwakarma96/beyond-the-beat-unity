@@ -57,6 +57,9 @@ namespace BeyondTheBeat.Editor
             string fastWorkflow = ReadProjectFile(FastWorkflowPath);
             string validationDoc = ReadProjectFile(Phase6DeviceMatrixBuilder.ValidationDocPath);
             string config = ReadProjectFile(Phase6DeviceMatrixBuilder.ConfigPath);
+            bool currentFastEntry =
+                fastWorkflow.Contains("BeyondTheBeat.Editor.Phase6PerformanceFastValidation.Validate", StringComparison.Ordinal) ||
+                fastWorkflow.Contains("BeyondTheBeat.Editor.Phase7IntegrationFastValidation.Validate", StringComparison.Ordinal);
 
             return buildAutomation.Contains("Phase6DeviceMatrixBuilder.PrepareAndValidateOrThrow", StringComparison.Ordinal) &&
                    buildAutomation.Contains("Phase6DeviceMatrixBuilder.ValidateTargetSdkOrThrow", StringComparison.Ordinal) &&
@@ -67,7 +70,7 @@ namespace BeyondTheBeat.Editor
                    fullWorkflow.Contains("DEVICE-MATRIX-STATUS.txt", StringComparison.Ordinal) &&
                    fullWorkflow.Contains("target_api=${TARGET_API}", StringComparison.Ordinal) &&
                    fullWorkflow.Contains("TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}", StringComparison.Ordinal) &&
-                   fastWorkflow.Contains("BeyondTheBeat.Editor.Phase6PerformanceFastValidation.Validate", StringComparison.Ordinal) &&
+                   currentFastEntry &&
                    fastWorkflow.Contains("pull_request:", StringComparison.Ordinal) &&
                    !fastWorkflow.Contains("androidExportType: androidPackage", StringComparison.Ordinal) &&
                    validationDoc.Contains("CI GREEN IS NOT DEVICE-MATRIX SIGN-OFF", StringComparison.Ordinal) &&

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BeyondTheBeat.Missions;
 using BeyondTheBeat.Puzzles;
 using BeyondTheBeat.Survival;
+using BeyondTheBeat.Vehicle;
 using BeyondTheBeat.World;
 using UnityEngine;
 
@@ -35,6 +36,9 @@ namespace BeyondTheBeat.Persistence
         private SavedTransform newGameVehicleTransform;
         private MissionDefinition newGameMission;
         private Rigidbody vehicleBody;
+        private VehicleController vehicleController;
+        private float newGameVehicleHealthCondition = 1f;
+        private float newGameVehicleTireWear;
         private bool initialized;
 
         public SaveManager SaveManager => saveManager;
@@ -53,6 +57,12 @@ namespace BeyondTheBeat.Persistence
             {
                 newGameVehicleTransform = SavedTransform.Capture(vehicleTransform);
                 vehicleBody = vehicleTransform.GetComponent<Rigidbody>();
+                vehicleController = vehicleTransform.GetComponent<VehicleController>();
+                if (vehicleController != null)
+                {
+                    newGameVehicleHealthCondition = vehicleController.HealthCondition;
+                    newGameVehicleTireWear = vehicleController.TireWear;
+                }
             }
 
             if (missionManager != null)
@@ -171,7 +181,10 @@ namespace BeyondTheBeat.Persistence
                     reachAndSolveActiveOrResolved && missionProgress.TargetContextActive,
                 Phase3PuzzleStates = puzzleStates,
                 HasPhase5ExplorationState = explorationActiveOrResolved,
-                MissionVisitedExplorationZoneIds = explorationZoneIds
+                MissionVisitedExplorationZoneIds = explorationZoneIds,
+                HasPhase7VehicleConditionState = vehicleController != null,
+                VehicleHealthCondition = vehicleController != null ? vehicleController.HealthCondition : 1f,
+                VehicleTireWear = vehicleController != null ? vehicleController.TireWear : 0f
             };
         }
 
@@ -190,6 +203,18 @@ namespace BeyondTheBeat.Persistence
             }
 
             ApplyVehicleTransform(data.VehicleTransform);
+
+            if (vehicleController != null)
+            {
+                vehicleController.RestoreCondition(
+                    data.HasPhase7VehicleConditionState ? data.VehicleHealthCondition : newGameVehicleHealthCondition,
+                    data.HasPhase7VehicleConditionState ? data.VehicleTireWear : newGameVehicleTireWear);
+            }
+            else if (data.HasPhase7VehicleConditionState)
+            {
+                Debug.LogWarning("[Beyond The Beat] Phase 7 save contains vehicle condition state but VehicleController is missing.");
+                return false;
+            }
 
             if (!RestorePuzzleStates(data))
             {
@@ -327,6 +352,7 @@ namespace BeyondTheBeat.Persistence
                 ApplyVehicleTransform(newGameVehicleTransform);
             }
 
+            vehicleController?.RestoreCondition(newGameVehicleHealthCondition, newGameVehicleTireWear);
             survivalController?.ResetResource();
             ResetPuzzlesToConfiguredState();
 
