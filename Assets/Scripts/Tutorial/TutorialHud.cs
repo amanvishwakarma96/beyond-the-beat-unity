@@ -1,3 +1,4 @@
+using BeyondTheBeat.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -9,6 +10,7 @@ namespace BeyondTheBeat.Tutorial
     {
         [SerializeField] private TutorialController controller;
         [SerializeField] private GameObject panel;
+        [SerializeField] private HudPanel hudPanel;
         [SerializeField] private TMP_Text titleText;
         [SerializeField] private TMP_Text instructionText;
         [SerializeField] private TMP_Text progressText;
@@ -65,6 +67,7 @@ namespace BeyondTheBeat.Tutorial
 
             controller = tutorialController;
             panel = panelObject;
+            hudPanel = panelObject != null ? panelObject.GetComponent<HudPanel>() : null;
             titleText = title;
             instructionText = instruction;
             progressText = progress;
@@ -84,10 +87,7 @@ namespace BeyondTheBeat.Tutorial
         public void Refresh()
         {
             bool visible = controller != null && controller.IsActive && controller.CurrentStep != null;
-            if (panel != null)
-            {
-                panel.SetActive(visible);
-            }
+            SetPanelVisible(visible);
 
             if (!visible)
             {
@@ -116,6 +116,30 @@ namespace BeyondTheBeat.Tutorial
         private void HandleSkip()
         {
             controller?.Skip();
+        }
+
+        private void SetPanelVisible(bool visible)
+        {
+            if (hudPanel == null && panel != null)
+            {
+                hudPanel = panel.GetComponent<HudPanel>();
+            }
+
+            if (hudPanel != null)
+            {
+                if (visible)
+                {
+                    hudPanel.Show();
+                }
+                else
+                {
+                    hudPanel.Hide();
+                }
+            }
+            else if (panel != null)
+            {
+                panel.SetActive(visible);
+            }
         }
     }
 }
