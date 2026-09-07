@@ -1,4 +1,5 @@
 using BeyondTheBeat.Missions;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,19 +10,20 @@ namespace BeyondTheBeat.UI
     {
         [SerializeField] private MissionManager missionManager;
         [SerializeField] private GameObject panelRoot;
-        [SerializeField] private Text titleText;
-        [SerializeField] private Text objectiveText;
-        [SerializeField] private Text statusText;
-        [SerializeField] private Text phaseStepText;
+        [SerializeField] private HudPanel panel;
+        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private TMP_Text objectiveText;
+        [SerializeField] private TMP_Text statusText;
+        [SerializeField] private TMP_Text phaseStepText;
         [SerializeField] private GameObject progressRoot;
         [SerializeField] private Image progressFill;
 
         public MissionManager MissionManager => missionManager;
         public GameObject PanelRoot => panelRoot;
-        public Text TitleText => titleText;
-        public Text ObjectiveText => objectiveText;
-        public Text StatusText => statusText;
-        public Text PhaseStepText => phaseStepText;
+        public TMP_Text TitleText => titleText;
+        public TMP_Text ObjectiveText => objectiveText;
+        public TMP_Text StatusText => statusText;
+        public TMP_Text PhaseStepText => phaseStepText;
         public GameObject ProgressRoot => progressRoot;
         public Image ProgressFill => progressFill;
 
@@ -56,10 +58,7 @@ namespace BeyondTheBeat.UI
             MissionProgressSnapshot progress = missionManager != null ? missionManager.Progress : default;
             MissionHudSnapshot snapshot = CreateSnapshot(mission, state, progress);
 
-            if (panelRoot != null)
-            {
-                panelRoot.SetActive(true);
-            }
+            ShowPanel();
 
             if (titleText != null)
             {
@@ -321,6 +320,23 @@ namespace BeyondTheBeat.UI
         private void HandleSurvivalValueChanged(float currentValue, float maxValue)
         {
             Refresh();
+        }
+
+        private void ShowPanel()
+        {
+            if (panel == null && panelRoot != null)
+            {
+                panel = panelRoot.GetComponent<HudPanel>();
+            }
+
+            if (panel != null)
+            {
+                panel.Show();
+            }
+            else if (panelRoot != null)
+            {
+                panelRoot.SetActive(true);
+            }
         }
     }
 
