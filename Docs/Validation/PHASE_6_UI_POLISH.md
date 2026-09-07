@@ -106,3 +106,19 @@ Automated validation proves deterministic layout contracts, safe-area wiring, to
 ## Follow-up
 
 Store icon/assets, broader device-matrix testing, and final release-candidate / soft-launch exit validation remain follow-up Phase 6 milestones.
+
+---
+
+## UI redesign + code-health follow-up
+
+The later UI/code-health pass keeps the same layout/input ownership but modernizes the generated presentation layer:
+
+- all runtime HUD text fields use TextMeshPro (`TMP_Text` / `TextMeshProUGUI`); builder-side legacy formatting syntax resolves to an editor-only `TextMeshProUGUI` compatibility component rather than generating `UnityEngine.UI.Text`;
+- `MobileUiTheme` now generates chamfered panel surfaces plus thin 9-sliced rounded/chamfer hairline sprites under `Assets/Generated/UI` while preserving the established palette;
+- `HudPanel` standardizes visibility with a 0.20 second unscaled fade + short slide and retains immediate fallback semantics for editor/non-playing configuration;
+- Interaction prompt, success feedback, speed, Mission, Tutorial, Mechanic Job and performance panels receive the same chamfered/hairline treatment in the final Phase 6 polish builder;
+- only explicit gameplay/Skip controls raycast. Hairline borders, panel backgrounds and TMP labels remain non-raycasting.
+
+### Additional physical check
+
+On the next Android candidate, confirm the 200 ms transitions do not make interaction prompts feel late, no text changes size unexpectedly after TMP migration, and rapid enter/exit of interaction zones does not leave a panel stuck visible or hidden. The automated pass validates component/wiring contracts only; visual font rendering and animation feel still require device review.

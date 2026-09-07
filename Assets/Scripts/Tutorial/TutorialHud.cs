@@ -1,3 +1,5 @@
+using BeyondTheBeat.UI;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,16 +10,17 @@ namespace BeyondTheBeat.Tutorial
     {
         [SerializeField] private TutorialController controller;
         [SerializeField] private GameObject panel;
-        [SerializeField] private Text titleText;
-        [SerializeField] private Text instructionText;
-        [SerializeField] private Text progressText;
+        [SerializeField] private HudPanel hudPanel;
+        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private TMP_Text instructionText;
+        [SerializeField] private TMP_Text progressText;
         [SerializeField] private Button skipButton;
 
         public TutorialController Controller => controller;
         public GameObject Panel => panel;
-        public Text TitleText => titleText;
-        public Text InstructionText => instructionText;
-        public Text ProgressText => progressText;
+        public TMP_Text TitleText => titleText;
+        public TMP_Text InstructionText => instructionText;
+        public TMP_Text ProgressText => progressText;
         public Button SkipButton => skipButton;
 
         private void OnEnable()
@@ -48,9 +51,9 @@ namespace BeyondTheBeat.Tutorial
         public void Configure(
             TutorialController tutorialController,
             GameObject panelObject,
-            Text title,
-            Text instruction,
-            Text progress,
+            TMP_Text title,
+            TMP_Text instruction,
+            TMP_Text progress,
             Button skip)
         {
             if (isActiveAndEnabled && controller != null)
@@ -64,6 +67,7 @@ namespace BeyondTheBeat.Tutorial
 
             controller = tutorialController;
             panel = panelObject;
+            hudPanel = panelObject != null ? panelObject.GetComponent<HudPanel>() : null;
             titleText = title;
             instructionText = instruction;
             progressText = progress;
@@ -83,10 +87,7 @@ namespace BeyondTheBeat.Tutorial
         public void Refresh()
         {
             bool visible = controller != null && controller.IsActive && controller.CurrentStep != null;
-            if (panel != null)
-            {
-                panel.SetActive(visible);
-            }
+            SetPanelVisible(visible);
 
             if (!visible)
             {
@@ -115,6 +116,30 @@ namespace BeyondTheBeat.Tutorial
         private void HandleSkip()
         {
             controller?.Skip();
+        }
+
+        private void SetPanelVisible(bool visible)
+        {
+            if (hudPanel == null && panel != null)
+            {
+                hudPanel = panel.GetComponent<HudPanel>();
+            }
+
+            if (hudPanel != null)
+            {
+                if (visible)
+                {
+                    hudPanel.Show();
+                }
+                else
+                {
+                    hudPanel.Hide();
+                }
+            }
+            else if (panel != null)
+            {
+                panel.SetActive(visible);
+            }
         }
     }
 }

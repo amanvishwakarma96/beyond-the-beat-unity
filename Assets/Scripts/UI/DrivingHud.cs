@@ -1,6 +1,6 @@
 using BeyondTheBeat.Vehicle;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeyondTheBeat.UI
 {
@@ -8,17 +8,20 @@ namespace BeyondTheBeat.UI
     public sealed class DrivingHud : MonoBehaviour
     {
         [SerializeField] private VehicleController vehicleController;
-        [SerializeField] private Text speedValueText;
-        [SerializeField] private Text speedUnitText;
+        [SerializeField] private TMP_Text speedValueText;
+        [SerializeField] private TMP_Text speedUnitText;
+        [SerializeField] private HudPanel speedPanel;
 
         private int displayedSpeed = int.MinValue;
 
         public VehicleController VehicleController => vehicleController;
-        public Text SpeedValueText => speedValueText;
-        public Text SpeedUnitText => speedUnitText;
+        public TMP_Text SpeedValueText => speedValueText;
+        public TMP_Text SpeedUnitText => speedUnitText;
 
         private void OnEnable()
         {
+            ResolveSpeedPanel();
+            speedPanel?.Show();
             Refresh(force: true);
         }
 
@@ -55,6 +58,16 @@ namespace BeyondTheBeat.UI
             {
                 speedUnitText.text = "KM/H";
             }
+        }
+
+        private void ResolveSpeedPanel()
+        {
+            if (speedPanel != null || speedValueText == null)
+            {
+                return;
+            }
+
+            speedPanel = speedValueText.GetComponentInParent<HudPanel>();
         }
     }
 }

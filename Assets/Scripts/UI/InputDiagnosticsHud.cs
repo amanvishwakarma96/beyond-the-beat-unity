@@ -1,5 +1,5 @@
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeyondTheBeat.UI
 {
@@ -7,11 +7,11 @@ namespace BeyondTheBeat.UI
     public sealed class InputDiagnosticsHud : MonoBehaviour
     {
         [SerializeField] private MobileDrivingInput mobileInput;
-        [SerializeField] private Text diagnosticsText;
+        [SerializeField] private TMP_Text diagnosticsText;
         [SerializeField] private GameObject diagnosticsRoot;
 
         public MobileDrivingInput MobileInput => mobileInput;
-        public Text DiagnosticsText => diagnosticsText;
+        public TMP_Text DiagnosticsText => diagnosticsText;
 
         private void Awake()
         {

@@ -7,98 +7,9 @@ using UnityEngine;
 
 namespace BeyondTheBeat.Missions
 {
-    public enum MissionState
-    {
-        Inactive = 0,
-        Active = 1,
-        Completed = 2,
-        Failed = 3
-    }
-
-    public readonly struct MissionProgressSnapshot
-    {
-        public MissionProgressSnapshot(
-            MissionObjectiveType objectiveType,
-            bool targetContextActive,
-            float survivalElapsedSeconds,
-            float survivalRequiredSeconds,
-            bool puzzleSolved)
-            : this(
-                objectiveType,
-                targetContextActive,
-                survivalElapsedSeconds,
-                survivalRequiredSeconds,
-                puzzleSolved,
-                0,
-                0)
-        {
-        }
-
-        public MissionProgressSnapshot(
-            MissionObjectiveType objectiveType,
-            bool targetContextActive,
-            float survivalElapsedSeconds,
-            float survivalRequiredSeconds,
-            bool puzzleSolved,
-            int explorationVisitedCount,
-            int explorationRequiredCount)
-        {
-            ObjectiveType = objectiveType;
-            TargetContextActive = targetContextActive;
-            SurvivalElapsedSeconds = Mathf.Max(0f, survivalElapsedSeconds);
-            SurvivalRequiredSeconds = Mathf.Max(0f, survivalRequiredSeconds);
-            PuzzleSolved = puzzleSolved;
-            ExplorationVisitedCount = Mathf.Max(0, explorationVisitedCount);
-            ExplorationRequiredCount = Mathf.Max(0, explorationRequiredCount);
-        }
-
-        public MissionObjectiveType ObjectiveType { get; }
-        public bool TargetContextActive { get; }
-        public float SurvivalElapsedSeconds { get; }
-        public float SurvivalRequiredSeconds { get; }
-        public bool PuzzleSolved { get; }
-        public int ExplorationVisitedCount { get; }
-        public int ExplorationRequiredCount { get; }
-
-        public float NormalizedProgress
-        {
-            get
-            {
-                if (ObjectiveType == MissionObjectiveType.ReachAndSolve)
-                {
-                    float progress = 0f;
-                    if (TargetContextActive)
-                    {
-                        progress += 0.5f;
-                    }
-
-                    if (PuzzleSolved)
-                    {
-                        progress += 0.5f;
-                    }
-
-                    return progress;
-                }
-
-                if (ObjectiveType == MissionObjectiveType.ExploreLocations)
-                {
-                    return ExplorationRequiredCount > 0
-                        ? Mathf.Clamp01((float)ExplorationVisitedCount / ExplorationRequiredCount)
-                        : 0f;
-                }
-
-                return SurvivalRequiredSeconds > 0f
-                    ? Mathf.Clamp01(SurvivalElapsedSeconds / SurvivalRequiredSeconds)
-                    : 0f;
-            }
-        }
-    }
-
     [DisallowMultipleComponent]
     public sealed class MissionManager : MonoBehaviour
     {
-        private const float ProgressPublishIntervalSeconds = 0.25f;
-
         [Header("Mission")]
         [SerializeField] private MissionDefinition startingMission;
         [SerializeField] private bool startOnPlay = true;
@@ -114,27 +25,22 @@ namespace BeyondTheBeat.Missions
         private readonly HashSet<ZoneContext> subscribedZones = new HashSet<ZoneContext>();
         private readonly Dictionary<PuzzleStateController, Action<bool>> puzzleStateHandlers =
             new Dictionary<PuzzleStateController, Action<bool>>();
-        private readonly HashSet<string> visitedExplorationZoneIds =
-            new HashSet<string>(StringComparer.Ordinal);
+        private readonly MissionStateMachine stateMachine = new MissionStateMachine();
+        private readonly MissionProgressTracker progressTracker = new MissionProgressTracker();
 
         private MissionDefinition currentMission;
-        private MissionState state = MissionState.Inactive;
-        private bool targetContextActive;
-        private float survivalElapsedSeconds;
-        private bool puzzleSolved;
-        private float lastPublishedSurvivalElapsed = -1f;
 
         public MissionDefinition StartingMission => startingMission;
         public MissionDefinition CurrentMission => currentMission;
         public string CurrentMissionId => currentMission != null ? currentMission.MissionId : string.Empty;
-        public MissionState State => state;
+        public MissionState State => stateMachine.State;
         public GameObject PlayerActor => playerActor;
         public int ObservedZoneCount => observedZones != null ? observedZones.Length : 0;
         public int ObservedPuzzleCount => observedPuzzles != null ? observedPuzzles.Length : 0;
         public ForestSurvivalController SurvivalController => survivalController;
-        public bool HasActiveMission => currentMission != null && state == MissionState.Active;
-        public int ExplorationVisitedCount => visitedExplorationZoneIds.Count;
-        public MissionProgressSnapshot Progress => CreateProgressSnapshot();
+        public bool HasActiveMission => currentMission != null && State == MissionState.Active;
+        public int ExplorationVisitedCount => progressTracker.ExplorationVisitedCount;
+        public MissionProgressSnapshot Progress => progressTracker.CreateSnapshot(currentMission);
 
         public event Action<MissionDefinition> MissionStarted;
         public event Action<MissionDefinition> MissionCompleted;
@@ -204,10 +110,10 @@ namespace BeyondTheBeat.Missions
             }
 
             currentMission = mission;
-            ResetObjectiveProgress();
+            progressTracker.Reset();
             if (puzzleSource != null)
             {
-                puzzleSolved = puzzleSource.IsSolved;
+                progressTracker.SetPuzzleSolved(puzzleSource.IsSolved);
             }
 
             SetState(MissionState.Active);
@@ -272,10 +178,10 @@ namespace BeyondTheBeat.Missions
             }
 
             currentMission = mission;
-            ResetObjectiveProgress();
+            progressTracker.Reset();
             if (puzzleSource != null)
             {
-                puzzleSolved = puzzleSource.IsSolved;
+                progressTracker.SetPuzzleSolved(puzzleSource.IsSolved);
             }
 
             SetState(restoredState);
@@ -293,12 +199,10 @@ namespace BeyondTheBeat.Missions
                 return false;
             }
 
-            targetContextActive = restoredTargetContextActive;
-            survivalElapsedSeconds = Mathf.Clamp(
+            progressTracker.RestoreSurvival(
+                restoredTargetContextActive,
                 restoredSurvivalElapsedSeconds,
-                0f,
                 currentMission.SurvivalDurationSeconds);
-            lastPublishedSurvivalElapsed = -1f;
             PublishProgress(true);
             return true;
         }
@@ -310,20 +214,9 @@ namespace BeyondTheBeat.Missions
                 return false;
             }
 
-            visitedExplorationZoneIds.Clear();
-            if (restoredZoneIds != null)
-            {
-                foreach (string zoneId in restoredZoneIds)
-                {
-                    if (!string.IsNullOrWhiteSpace(zoneId) && currentMission.IsExplorationZone(zoneId))
-                    {
-                        visitedExplorationZoneIds.Add(zoneId);
-                    }
-                }
-            }
-
+            bool completed = progressTracker.RestoreExploration(currentMission, restoredZoneIds);
             PublishProgress(true);
-            if (visitedExplorationZoneIds.Count >= currentMission.ExplorationZoneCount)
+            if (completed)
             {
                 CompleteActiveMission();
             }
@@ -333,15 +226,7 @@ namespace BeyondTheBeat.Missions
 
         public string[] GetVisitedExplorationZoneIds()
         {
-            if (visitedExplorationZoneIds.Count == 0)
-            {
-                return Array.Empty<string>();
-            }
-
-            string[] values = new string[visitedExplorationZoneIds.Count];
-            visitedExplorationZoneIds.CopyTo(values);
-            Array.Sort(values, StringComparer.Ordinal);
-            return values;
+            return progressTracker.GetVisitedExplorationZoneIds();
         }
 
         public bool FailActiveMission()
@@ -363,7 +248,7 @@ namespace BeyondTheBeat.Missions
         public void ClearMission()
         {
             currentMission = null;
-            ResetObjectiveProgress();
+            progressTracker.Reset();
             SetState(MissionState.Inactive);
             PublishProgress(true);
         }
@@ -393,19 +278,18 @@ namespace BeyondTheBeat.Missions
 
             if (currentMission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
             {
-                targetContextActive = true;
-                survivalElapsedSeconds = 0f;
+                progressTracker.EnterTargetContext(resetSurvival: true);
                 PublishProgress(true);
                 return true;
             }
 
             if (currentMission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
             {
-                targetContextActive = true;
+                progressTracker.EnterTargetContext(resetSurvival: false);
                 PuzzleStateController source = ResolvePuzzleSource(currentMission.TargetPuzzleId);
-                puzzleSolved = source != null && source.IsSolved;
+                progressTracker.SetPuzzleSolved(source != null && source.IsSolved);
                 PublishProgress(true);
-                return puzzleSolved ? CompleteActiveMission() : true;
+                return progressTracker.PuzzleSolved ? CompleteActiveMission() : true;
             }
 
             return false;
@@ -421,17 +305,16 @@ namespace BeyondTheBeat.Missions
 
             if (currentMission.ObjectiveType == MissionObjectiveType.ReachAndSurvive)
             {
-                targetContextActive = false;
-                survivalElapsedSeconds = 0f;
+                progressTracker.ExitTargetContext(resetSurvival: true);
                 PublishProgress(true);
                 return true;
             }
 
             if (currentMission.ObjectiveType == MissionObjectiveType.ReachAndSolve)
             {
-                targetContextActive = false;
+                progressTracker.ExitTargetContext(resetSurvival: false);
                 PuzzleStateController source = ResolvePuzzleSource(currentMission.TargetPuzzleId);
-                puzzleSolved = source != null && source.IsSolved;
+                progressTracker.SetPuzzleSolved(source != null && source.IsSolved);
                 PublishProgress(true);
                 return true;
             }
@@ -452,10 +335,10 @@ namespace BeyondTheBeat.Missions
                 return false;
             }
 
-            puzzleSolved = solved;
+            progressTracker.SetPuzzleSolved(solved);
             PublishProgress(true);
 
-            if (targetContextActive && puzzleSolved)
+            if (progressTracker.TargetContextActive && progressTracker.PuzzleSolved)
             {
                 CompleteActiveMission();
             }
@@ -467,7 +350,7 @@ namespace BeyondTheBeat.Missions
         {
             if (!HasActiveMission ||
                 currentMission.ObjectiveType != MissionObjectiveType.ReachAndSurvive ||
-                !targetContextActive ||
+                !progressTracker.TargetContextActive ||
                 survivalController == null ||
                 survivalController.Resource == null ||
                 !survivalController.Resource.IsDepleted)
@@ -482,7 +365,7 @@ namespace BeyondTheBeat.Missions
         {
             if (!HasActiveMission ||
                 currentMission.ObjectiveType != MissionObjectiveType.ReachAndSurvive ||
-                !targetContextActive ||
+                !progressTracker.TargetContextActive ||
                 deltaTime <= 0f ||
                 survivalController == null ||
                 !survivalController.IsPressureActive ||
@@ -496,16 +379,9 @@ namespace BeyondTheBeat.Missions
                 return TryProcessSurvivalDepleted();
             }
 
-            float requiredSeconds = currentMission.SurvivalDurationSeconds;
-            survivalElapsedSeconds = Mathf.Min(requiredSeconds, survivalElapsedSeconds + deltaTime);
+            bool completed = progressTracker.TickSurvival(deltaTime, currentMission.SurvivalDurationSeconds);
             PublishProgress(false);
-
-            if (survivalElapsedSeconds + 0.0001f < requiredSeconds)
-            {
-                return false;
-            }
-
-            return CompleteActiveMission();
+            return completed && CompleteActiveMission();
         }
 
         public void RebindZoneSources()
@@ -533,13 +409,13 @@ namespace BeyondTheBeat.Missions
                 return false;
             }
 
-            if (!visitedExplorationZoneIds.Add(zone.ZoneId))
+            if (!progressTracker.TryVisitExplorationZone(zone.ZoneId))
             {
                 return false;
             }
 
             PublishProgress(true);
-            if (visitedExplorationZoneIds.Count >= currentMission.ExplorationZoneCount)
+            if (progressTracker.ExplorationVisitedCount >= currentMission.ExplorationZoneCount)
             {
                 CompleteActiveMission();
             }
@@ -659,55 +535,18 @@ namespace BeyondTheBeat.Missions
 
         private void SetState(MissionState newState)
         {
-            if (state == newState)
+            if (stateMachine.SetState(newState))
             {
-                return;
+                MissionStateChanged?.Invoke(currentMission, State);
             }
-
-            state = newState;
-            MissionStateChanged?.Invoke(currentMission, state);
-        }
-
-        private void ResetObjectiveProgress()
-        {
-            targetContextActive = false;
-            survivalElapsedSeconds = 0f;
-            puzzleSolved = false;
-            visitedExplorationZoneIds.Clear();
-            lastPublishedSurvivalElapsed = -1f;
-        }
-
-        private MissionProgressSnapshot CreateProgressSnapshot()
-        {
-            MissionObjectiveType objectiveType = currentMission != null
-                ? currentMission.ObjectiveType
-                : MissionObjectiveType.ReachLocation;
-            float requiredSeconds = currentMission != null ? currentMission.SurvivalDurationSeconds : 0f;
-            int explorationRequiredCount = currentMission != null &&
-                                           currentMission.ObjectiveType == MissionObjectiveType.ExploreLocations
-                ? currentMission.ExplorationZoneCount
-                : 0;
-
-            return new MissionProgressSnapshot(
-                objectiveType,
-                targetContextActive,
-                survivalElapsedSeconds,
-                requiredSeconds,
-                puzzleSolved,
-                visitedExplorationZoneIds.Count,
-                explorationRequiredCount);
         }
 
         private void PublishProgress(bool force)
         {
-            if (!force &&
-                Mathf.Abs(survivalElapsedSeconds - lastPublishedSurvivalElapsed) < ProgressPublishIntervalSeconds)
+            if (progressTracker.ShouldPublish(force))
             {
-                return;
+                MissionProgressChanged?.Invoke(progressTracker.CreateSnapshot(currentMission));
             }
-
-            lastPublishedSurvivalElapsed = survivalElapsedSeconds;
-            MissionProgressChanged?.Invoke(CreateProgressSnapshot());
         }
 
         private void SubscribeToZones()
