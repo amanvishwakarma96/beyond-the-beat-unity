@@ -21,17 +21,18 @@ The fitter:
 
 ## Integrated safe-area targets
 
-The Phase 6 polish builder fits these known roots:
+The Phase 6 polish builder directly fits these eight known roots:
 
 1. `InteractionHUD`
 2. `DrivingControls`
 3. `SwimControls`
 4. `SwimModeEnter`
-5. `SwimModeExit`
-6. `Phase1MissionHUD`
-7. `Phase4MechanicJobHUD`
-8. `TutorialOnboardingPanel`
-9. `PerformanceDiagnosticsOverlay`
+5. `Phase1MissionHUD`
+6. `Phase4MechanicJobHUD`
+7. `TutorialOnboardingPanel`
+8. `PerformanceDiagnosticsOverlay`
+
+`SwimModeExit` remains nested beneath `SwimControls`, matching the existing Phase 5 hierarchy. It therefore inherits the `SwimControls` safe-area mapping and intentionally does **not** receive a second `MobileSafeAreaFitter`; fitting both parent and child would double-apply the device inset.
 
 The existing `MobileDrivingInput`, `MobileSwimInput`, touch button mappings, `AquaticModeCoordinator`, mission system, interaction controller, and gameplay camera remain the sources of truth.
 
@@ -44,6 +45,7 @@ At the 1920 x 1080 authored reference layout:
 - Performance diagnostics remain compact in the upper-right.
 - Mechanic Job HUD moves below the performance overlay in the upper-right instead of overlapping the Mission HUD.
 - Drive and Swim control roots remain in their existing authored control zones and are only safe-area fitted at runtime.
+- The nested `DRIVE` (`SwimModeExit`) button moves with `SwimControls` as one unit.
 
 The tutorial and mechanic-job panels use the same generated rounded mobile visual language already used by the Mission HUD and touch controls.
 
@@ -64,7 +66,8 @@ Fast validation proves without scene regeneration or APK packaging:
 
 The full Phase 6 Android preparation additionally proves:
 
-- all nine known HUD/control roots exist and have configured `MobileSafeAreaFitter` components;
+- all eight direct HUD/control roots exist and have configured `MobileSafeAreaFitter` components;
+- nested `SwimModeExit` exists under `SwimControls`, remains a Button, and has no second fitter;
 - Mission HUD remains non-raycasting;
 - Mechanic Job HUD is in the authored upper-right region, uses rounded presentation, and remains non-raycasting;
 - Tutorial panel uses rounded presentation, Skip is at least 104 x 48, and only the Skip target raycasts;
@@ -89,6 +92,7 @@ Record:
 - Mechanic Job HUD readability and confirmation that it does not overlap Mission/Tutorial/Performance content;
 - LEFT/RIGHT/GO/REV/ACTION multitouch behavior after safe-area fitting;
 - SWIM/BACK/DIVE/SURFACE and DRIVE ↔ SWIM mode-button behavior after safe-area fitting;
+- confirmation that nested DRIVE moves with the Swim controls and is not over-inset;
 - Interaction prompt/speed HUD placement;
 - Parking, Cook, Repair, Mechanic Job, mission, survival, restricted-area puzzle, exploration, save/relaunch, and camera-handoff regressions;
 - FPS/frame-time/thermal observations with all Phase 6 overlays active where applicable.
