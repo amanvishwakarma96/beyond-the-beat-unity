@@ -10,6 +10,7 @@ namespace BeyondTheBeat.UI
         [SerializeField] private VehicleController vehicleController;
         [SerializeField] private TMP_Text speedValueText;
         [SerializeField] private TMP_Text speedUnitText;
+        [SerializeField] private HudPanel speedPanel;
 
         private int displayedSpeed = int.MinValue;
 
@@ -19,6 +20,8 @@ namespace BeyondTheBeat.UI
 
         private void OnEnable()
         {
+            ResolveSpeedPanel();
+            speedPanel?.Show();
             Refresh(force: true);
         }
 
@@ -55,6 +58,16 @@ namespace BeyondTheBeat.UI
             {
                 speedUnitText.text = "KM/H";
             }
+        }
+
+        private void ResolveSpeedPanel()
+        {
+            if (speedPanel != null || speedValueText == null)
+            {
+                return;
+            }
+
+            speedPanel = speedValueText.GetComponentInParent<HudPanel>();
         }
     }
 }
