@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using BeyondTheBeat.CameraSystem;
 using BeyondTheBeat.Vehicle;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.UI;
@@ -25,7 +26,7 @@ namespace BeyondTheBeat.UI
 
         private readonly StringBuilder builder = new StringBuilder(768);
 
-        private Text displayText;
+        private TMP_Text displayText;
         private VehicleController vehicleController;
         private CameraFollow cameraFollow;
         private int sampleFrameCount;
@@ -81,7 +82,7 @@ namespace BeyondTheBeat.UI
             background.color = new Color(0.02f, 0.03f, 0.05f, 0.78f);
             background.raycastTarget = false;
 
-            GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
+            GameObject textObject = new GameObject("Text", typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             textObject.transform.SetParent(root.transform, false);
 
             RectTransform textRect = textObject.GetComponent<RectTransform>();
@@ -90,13 +91,12 @@ namespace BeyondTheBeat.UI
             textRect.offsetMin = new Vector2(16f, 12f);
             textRect.offsetMax = new Vector2(-16f, -12f);
 
-            Text text = textObject.GetComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            text.fontSize = 22;
-            text.resizeTextForBestFit = true;
-            text.resizeTextMinSize = 14;
-            text.resizeTextMaxSize = 22;
-            text.alignment = TextAnchor.UpperLeft;
+            TextMeshProUGUI text = textObject.GetComponent<TextMeshProUGUI>();
+            text.fontSize = 22f;
+            text.enableAutoSizing = true;
+            text.fontSizeMin = 14f;
+            text.fontSizeMax = 22f;
+            text.alignment = TextAlignmentOptions.TopLeft;
             text.color = Color.white;
             text.raycastTarget = false;
 
