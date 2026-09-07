@@ -1,6 +1,6 @@
 using BeyondTheBeat.Interaction;
+using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeyondTheBeat.UI
 {
@@ -12,12 +12,12 @@ namespace BeyondTheBeat.UI
 
         [Header("Interaction Prompt")]
         [SerializeField] private GameObject promptRoot;
-        [SerializeField] private Text promptText;
+        [SerializeField] private TMP_Text promptText;
         [SerializeField] private string promptPrefix = "ACTION / E  •  ";
 
         [Header("Feedback")]
         [SerializeField] private GameObject feedbackRoot;
-        [SerializeField] private Text feedbackText;
+        [SerializeField] private TMP_Text feedbackText;
         [SerializeField, Min(0.25f)] private float feedbackDuration = 2f;
 
         private float feedbackRemaining;
