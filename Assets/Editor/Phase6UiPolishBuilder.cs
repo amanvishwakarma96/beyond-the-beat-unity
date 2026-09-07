@@ -53,11 +53,16 @@ namespace BeyondTheBeat.Editor
             Transform drivingControls = RequireChild(canvas.transform, DrivingControlsName);
             Transform swimControls = RequireChild(canvas.transform, SwimControlsName);
             Transform enterSwim = RequireChild(canvas.transform, EnterSwimName);
-            Transform exitSwim = RequireChild(canvas.transform, ExitSwimName);
+            Transform exitSwim = RequireChild(swimControls, ExitSwimName);
             Transform missionHudRoot = RequireChild(canvas.transform, MissionHudName);
             Transform mechanicHudRoot = RequireChild(canvas.transform, MechanicHudName);
             Transform tutorialPanel = RequireChild(canvas.transform, TutorialPanelName);
             Transform performanceOverlay = RequireChild(canvas.transform, PerformanceOverlayName);
+
+            if (exitSwim.GetComponent<Button>() == null)
+            {
+                throw new InvalidOperationException("SwimModeExit is missing its Button component.");
+            }
 
             MissionHud missionHud = missionHudRoot.GetComponent<MissionHud>() ??
                                     throw new InvalidOperationException("Phase1MissionHUD is missing MissionHud.");
@@ -73,13 +78,14 @@ namespace BeyondTheBeat.Editor
             PolishPerformanceOverlay(performance);
             PolishMissionHud(missionHud);
 
+            // SwimModeExit is nested under SwimControls and inherits the parent's safe-area mapping.
+            // Fitting the child separately would apply the inset twice.
             Transform[] safeAreaTargets =
             {
                 interactionHud,
                 drivingControls,
                 swimControls,
                 enterSwim,
-                exitSwim,
                 missionHudRoot,
                 mechanicHudRoot,
                 tutorialPanel,
@@ -103,8 +109,9 @@ namespace BeyondTheBeat.Editor
 
             Selection.activeGameObject = tutorialPanel.gameObject;
             Debug.Log(
-                "[Beyond The Beat] Phase 6 mobile HUD polish applied: safe-area fitting, distinct top HUD regions, " +
-                "consistent rounded presentation and preserved drive/swim touch ownership.");
+                "[Beyond The Beat] Phase 6 mobile HUD polish applied: eight direct roots are safe-area fitted, " +
+                "nested DRIVE exit inherits SwimControls safe-area mapping, top HUD regions are separated, " +
+                "and drive/swim touch ownership is preserved.");
         }
 
         [MenuItem("Beyond The Beat/Phase 6/Validate Mobile HUD Polish")]
@@ -151,32 +158,36 @@ namespace BeyondTheBeat.Editor
                     return false;
                 }
 
-                string[] targetNames =
+                string[] directTargetNames =
                 {
                     InteractionHudName,
                     DrivingControlsName,
                     SwimControlsName,
                     EnterSwimName,
-                    ExitSwimName,
                     MissionHudName,
                     MechanicHudName,
                     TutorialPanelName,
                     PerformanceOverlayName
                 };
 
-                List<Transform> targets = targetNames
+                List<Transform> targets = directTargetNames
                     .Select(name => canvas.transform.Find(name))
                     .Where(value => value != null)
                     .ToList();
 
-                bool structurePass = targets.Count == targetNames.Length;
+                Transform swimControlsRoot = canvas.transform.Find(SwimControlsName);
+                Transform exitSwim = swimControlsRoot != null ? swimControlsRoot.Find(ExitSwimName) : null;
+                bool structurePass = targets.Count == directTargetNames.Length &&
+                                     exitSwim != null &&
+                                     exitSwim.GetComponent<Button>() != null;
+
                 bool safeAreaPass = structurePass && targets.All(target =>
                 {
                     MobileSafeAreaFitter fitter = target.GetComponent<MobileSafeAreaFitter>();
                     return fitter != null &&
                            fitter.Target == target.GetComponent<RectTransform>() &&
                            fitter.HasAuthoredLayout;
-                });
+                }) && exitSwim.GetComponent<MobileSafeAreaFitter>() == null;
 
                 MissionHud missionHud = canvas.transform.Find(MissionHudName)?.GetComponent<MissionHud>();
                 MechanicJobHud mechanicHud = canvas.transform.Find(MechanicHudName)?.GetComponent<MechanicJobHud>();
@@ -184,7 +195,7 @@ namespace BeyondTheBeat.Editor
                 PerformanceDiagnosticsOverlay performance =
                     canvas.transform.Find(PerformanceOverlayName)?.GetComponent<PerformanceDiagnosticsOverlay>();
                 MobileDrivingInput drivingInput = canvas.GetComponent<MobileDrivingInput>();
-                MobileSwimInput swimInput = canvas.transform.Find(SwimControlsName)?.GetComponent<MobileSwimInput>();
+                MobileSwimInput swimInput = swimControlsRoot != null ? swimControlsRoot.GetComponent<MobileSwimInput>() : null;
 
                 bool mechanicPass = ValidateMechanicHud(mechanicHud);
                 bool tutorialPass = ValidateTutorialHud(tutorialHud);
@@ -195,8 +206,10 @@ namespace BeyondTheBeat.Editor
 
                 bool inputPass = drivingInput != null &&
                                  swimInput != null &&
+                                 exitSwim != null &&
+                                 exitSwim.GetComponent<Button>() != null &&
                                  canvas.transform.Find(DrivingControlsName).GetComponentsInChildren<TouchHoldButton>(true).Length == 5 &&
-                                 canvas.transform.Find(SwimControlsName).GetComponentsInChildren<TouchHoldButton>(true).Length == 6;
+                                 swimControlsRoot.GetComponentsInChildren<TouchHoldButton>(true).Length == 6;
 
                 bool layoutPass = ReferenceLayoutHasNoTopOverlayOverlap();
                 bool inheritedPass = FindRoot(scene, "Phase6Performance") != null &&
@@ -222,7 +235,7 @@ namespace BeyondTheBeat.Editor
                             missionPass && inputPass && layoutPass && inheritedPass && cameraPass && buildSettingsPass && docPass;
 
                 message = pass
-                    ? "[Beyond The Beat] Phase 6 mobile HUD polish validation PASS: nine known HUD/control roots are safe-area fitted, mission/mechanic/tutorial/performance regions are distinct, themed presentation remains touch-safe, drive/swim mappings are intact, and inherited gameplay/single-scene contracts remain present."
+                    ? "[Beyond The Beat] Phase 6 mobile HUD polish validation PASS: eight direct HUD/control roots are safe-area fitted, nested DRIVE exit inherits SwimControls safe-area mapping without double inset, mission/mechanic/tutorial/performance regions are distinct, themed presentation remains touch-safe, drive/swim mappings are intact, and inherited gameplay/single-scene contracts remain present."
                     : "[Beyond The Beat] Phase 6 mobile HUD polish validation FAIL: " +
                       $"structure={structurePass}, safeArea={safeAreaPass}, mechanic={mechanicPass}, tutorial={tutorialPass}, " +
                       $"performance={performancePass}, mission={missionPass}, input={inputPass}, layout={layoutPass}, " +
