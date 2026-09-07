@@ -9,6 +9,7 @@ namespace BeyondTheBeat.Editor
     internal static class Phase6DeviceMatrixFastValidation
     {
         private const string BuildAutomationPath = "Assets/Editor/Phase6BuildAutomation.cs";
+        private const string DeviceMatrixBuilderPath = "Assets/Editor/Phase6DeviceMatrixBuilder.cs";
         private const string FullWorkflowPath = ".github/workflows/phase2-forest-foundation.yml";
         private const string FastWorkflowPath = ".github/workflows/fast-current-milestone-validation.yml";
 
@@ -51,15 +52,20 @@ namespace BeyondTheBeat.Editor
         private static bool ValidateRepositoryContracts()
         {
             string buildAutomation = ReadProjectFile(BuildAutomationPath);
+            string deviceMatrixBuilder = ReadProjectFile(DeviceMatrixBuilderPath);
             string fullWorkflow = ReadProjectFile(FullWorkflowPath);
             string fastWorkflow = ReadProjectFile(FastWorkflowPath);
             string validationDoc = ReadProjectFile(Phase6DeviceMatrixBuilder.ValidationDocPath);
             string config = ReadProjectFile(Phase6DeviceMatrixBuilder.ConfigPath);
 
             return buildAutomation.Contains("Phase6DeviceMatrixBuilder.PrepareAndValidateOrThrow", StringComparison.Ordinal) &&
-                   buildAutomation.Contains("AndroidApiLevel36", StringComparison.Ordinal) == false &&
+                   buildAutomation.Contains("Phase6DeviceMatrixBuilder.ValidateTargetSdkOrThrow", StringComparison.Ordinal) &&
+                   deviceMatrixBuilder.Contains("AndroidSdkVersions.AndroidApiLevel36", StringComparison.Ordinal) &&
+                   deviceMatrixBuilder.Contains("physicalEvidence=PENDING", StringComparison.Ordinal) &&
+                   deviceMatrixBuilder.Contains("releaseCandidateSignOff=BLOCKED_UNTIL_PHYSICAL_EVIDENCE", StringComparison.Ordinal) &&
                    fullWorkflow.Contains("DEVICE-MATRIX", StringComparison.Ordinal) &&
                    fullWorkflow.Contains("DEVICE-MATRIX-STATUS.txt", StringComparison.Ordinal) &&
+                   fullWorkflow.Contains("target_api=${TARGET_API}", StringComparison.Ordinal) &&
                    fullWorkflow.Contains("TEST-THIS-BUILD-${GITHUB_RUN_NUMBER}", StringComparison.Ordinal) &&
                    fastWorkflow.Contains("BeyondTheBeat.Editor.Phase6PerformanceFastValidation.Validate", StringComparison.Ordinal) &&
                    fastWorkflow.Contains("pull_request:", StringComparison.Ordinal) &&
