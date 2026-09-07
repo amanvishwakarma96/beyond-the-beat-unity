@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using BeyondTheBeat.Tutorial;
 using BeyondTheBeat.UI;
+using TMPro;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -25,6 +26,10 @@ namespace BeyondTheBeat.Editor
         private const string MechanicHudName = "Phase4MechanicJobHUD";
         private const string TutorialPanelName = "TutorialOnboardingPanel";
         private const string PerformanceOverlayName = "PerformanceDiagnosticsOverlay";
+        private const string PromptPanelName = "InteractionPrompt";
+        private const string FeedbackPanelName = "SuccessFeedback";
+        private const string SpeedPanelName = "SpeedPanel";
+        private const string BorderName = "HudPanelBorder";
         private const string ValidationDocPath = "Docs/Validation/PHASE_6_UI_POLISH.md";
 
         private static readonly Vector2 MechanicPosition = new Vector2(-28f, -118f);
@@ -58,6 +63,9 @@ namespace BeyondTheBeat.Editor
             Transform mechanicHudRoot = RequireChild(canvas.transform, MechanicHudName);
             Transform tutorialPanel = RequireChild(canvas.transform, TutorialPanelName);
             Transform performanceOverlay = RequireChild(canvas.transform, PerformanceOverlayName);
+            Transform promptPanel = RequireChild(interactionHud, PromptPanelName);
+            Transform feedbackPanel = RequireChild(interactionHud, FeedbackPanelName);
+            Transform speedPanel = RequireChild(interactionHud, SpeedPanelName);
 
             if (exitSwim.GetComponent<Button>() == null)
             {
@@ -77,6 +85,14 @@ namespace BeyondTheBeat.Editor
             PolishTutorialHud(tutorialHud);
             PolishPerformanceOverlay(performance);
             PolishMissionHud(missionHud);
+
+            ConfigureHudPanel(promptPanel.gameObject, MobileUiTheme.Cyan);
+            ConfigureHudPanel(feedbackPanel.gameObject, MobileUiTheme.Cyan);
+            ConfigureHudPanel(speedPanel.gameObject, MobileUiTheme.Cyan);
+            ConfigureHudPanel(missionHudRoot.gameObject, MobileUiTheme.Cyan);
+            ConfigureHudPanel(mechanicHudRoot.gameObject, MobileUiTheme.Cyan);
+            ConfigureHudPanel(tutorialPanel.gameObject, MobileUiTheme.Amber);
+            ConfigureHudPanel(performanceOverlay.gameObject, MobileUiTheme.Cyan);
 
             // SwimModeExit is nested under SwimControls and inherits the parent's safe-area mapping.
             // Fitting the child separately would apply the inset twice.
@@ -109,9 +125,8 @@ namespace BeyondTheBeat.Editor
 
             Selection.activeGameObject = tutorialPanel.gameObject;
             Debug.Log(
-                "[Beyond The Beat] Phase 6 mobile HUD polish applied: eight direct roots are safe-area fitted, " +
-                "nested DRIVE exit inherits SwimControls safe-area mapping, top HUD regions are separated, " +
-                "and drive/swim touch ownership is preserved.");
+                "[Beyond The Beat] Phase 6 mobile HUD polish applied: safe-area layout, TMP-driven HUD text, " +
+                "shared 200 ms chamfered HudPanel transitions, hairline borders and touch ownership are preserved.");
         }
 
         [MenuItem("Beyond The Beat/Phase 6/Validate Mobile HUD Polish")]
@@ -175,9 +190,11 @@ namespace BeyondTheBeat.Editor
                     .Where(value => value != null)
                     .ToList();
 
+                Transform interactionHud = canvas.transform.Find(InteractionHudName);
                 Transform swimControlsRoot = canvas.transform.Find(SwimControlsName);
                 Transform exitSwim = swimControlsRoot != null ? swimControlsRoot.Find(ExitSwimName) : null;
                 bool structurePass = targets.Count == directTargetNames.Length &&
+                                     interactionHud != null &&
                                      exitSwim != null &&
                                      exitSwim.GetComponent<Button>() != null;
 
@@ -203,6 +220,15 @@ namespace BeyondTheBeat.Editor
                 bool missionPass = missionHud != null &&
                                    missionHud.PanelRoot != null &&
                                    missionHud.PanelRoot.GetComponentsInChildren<Graphic>(true).All(graphic => !graphic.raycastTarget);
+
+                bool panelPass = structurePass &&
+                                 HasHudPanel(interactionHud.Find(PromptPanelName)) &&
+                                 HasHudPanel(interactionHud.Find(FeedbackPanelName)) &&
+                                 HasHudPanel(interactionHud.Find(SpeedPanelName)) &&
+                                 HasHudPanel(canvas.transform.Find(MissionHudName)) &&
+                                 HasHudPanel(canvas.transform.Find(MechanicHudName)) &&
+                                 HasHudPanel(canvas.transform.Find(TutorialPanelName)) &&
+                                 HasHudPanel(canvas.transform.Find(PerformanceOverlayName));
 
                 bool inputPass = drivingInput != null &&
                                  swimInput != null &&
@@ -232,14 +258,15 @@ namespace BeyondTheBeat.Editor
                 bool docPass = File.Exists(ValidationDocPath) || AssetDatabase.LoadAssetAtPath<TextAsset>(ValidationDocPath) != null;
 
                 bool pass = structurePass && safeAreaPass && mechanicPass && tutorialPass && performancePass &&
-                            missionPass && inputPass && layoutPass && inheritedPass && cameraPass && buildSettingsPass && docPass;
+                            missionPass && panelPass && inputPass && layoutPass && inheritedPass && cameraPass &&
+                            buildSettingsPass && docPass;
 
                 message = pass
-                    ? "[Beyond The Beat] Phase 6 mobile HUD polish validation PASS: eight direct HUD/control roots are safe-area fitted, nested DRIVE exit inherits SwimControls safe-area mapping without double inset, mission/mechanic/tutorial/performance regions are distinct, themed presentation remains touch-safe, drive/swim mappings are intact, and inherited gameplay/single-scene contracts remain present."
+                    ? "[Beyond The Beat] Phase 6 mobile HUD polish validation PASS: safe-area roots, TMP text, shared HudPanel transitions, chamfered/hairline presentation, distinct top regions, touch ownership and inherited gameplay contracts are intact."
                     : "[Beyond The Beat] Phase 6 mobile HUD polish validation FAIL: " +
                       $"structure={structurePass}, safeArea={safeAreaPass}, mechanic={mechanicPass}, tutorial={tutorialPass}, " +
-                      $"performance={performancePass}, mission={missionPass}, input={inputPass}, layout={layoutPass}, " +
-                      $"inherited={inheritedPass}, camera={cameraPass}, buildSettings={buildSettingsPass}, doc={docPass}.";
+                      $"performance={performancePass}, mission={missionPass}, panels={panelPass}, input={inputPass}, " +
+                      $"layout={layoutPass}, inherited={inheritedPass}, camera={cameraPass}, buildSettings={buildSettingsPass}, doc={docPass}.";
                 return pass;
             }
             finally
@@ -283,7 +310,7 @@ namespace BeyondTheBeat.Editor
             Image background = hud.PanelRoot.GetComponent<Image>();
             if (background != null)
             {
-                background.sprite = MobileUiTheme.RoundedRectSprite;
+                background.sprite = MobileUiTheme.ChamferedRectSprite;
                 background.type = Image.Type.Sliced;
                 background.color = new Color(0.025f, 0.045f, 0.07f, 0.93f);
                 background.raycastTarget = false;
@@ -309,7 +336,7 @@ namespace BeyondTheBeat.Editor
             {
                 throw new InvalidOperationException("Mechanic job HUD is missing its Image background.");
             }
-            background.sprite = MobileUiTheme.RoundedRectSprite;
+            background.sprite = MobileUiTheme.ChamferedRectSprite;
             background.type = Image.Type.Sliced;
             background.color = MobileUiTheme.InkSoft;
             background.raycastTarget = false;
@@ -340,7 +367,7 @@ namespace BeyondTheBeat.Editor
             {
                 throw new InvalidOperationException("Tutorial panel is missing its Image background.");
             }
-            background.sprite = MobileUiTheme.RoundedRectSprite;
+            background.sprite = MobileUiTheme.ChamferedRectSprite;
             background.type = Image.Type.Sliced;
             background.color = MobileUiTheme.Ink;
             background.raycastTarget = false;
@@ -367,7 +394,7 @@ namespace BeyondTheBeat.Editor
             skipImage.raycastTarget = true;
             hud.SkipButton.targetGraphic = skipImage;
 
-            Text skipLabel = hud.SkipButton.GetComponentInChildren<Text>(true);
+            TMP_Text skipLabel = hud.SkipButton.GetComponentInChildren<TMP_Text>(true);
             if (skipLabel != null)
             {
                 SetTextStyle(skipLabel, 16, FontStyle.Bold, MobileUiTheme.Ink);
@@ -391,13 +418,60 @@ namespace BeyondTheBeat.Editor
             Image background = overlay.GetComponent<Image>();
             if (background != null)
             {
-                background.sprite = MobileUiTheme.RoundedRectSprite;
+                background.sprite = MobileUiTheme.ChamferedRectSprite;
                 background.type = Image.Type.Sliced;
                 background.color = new Color(0.025f, 0.045f, 0.07f, 0.78f);
                 background.raycastTarget = false;
             }
 
             SetTextStyle(overlay.MetricsText, 15, FontStyle.Bold, MobileUiTheme.Muted);
+        }
+
+        private static void ConfigureHudPanel(GameObject root, Color borderColor)
+        {
+            if (root == null)
+            {
+                throw new InvalidOperationException("Cannot configure a null HUD panel root.");
+            }
+
+            Image background = root.GetComponent<Image>();
+            if (background != null)
+            {
+                background.sprite = MobileUiTheme.ChamferedRectSprite;
+                background.type = Image.Type.Sliced;
+                background.raycastTarget = false;
+            }
+
+            Transform existingBorder = root.transform.Find(BorderName);
+            GameObject borderObject;
+            if (existingBorder == null)
+            {
+                borderObject = new GameObject(BorderName, typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                borderObject.transform.SetParent(root.transform, false);
+            }
+            else
+            {
+                borderObject = existingBorder.gameObject;
+            }
+
+            RectTransform borderRect = borderObject.GetComponent<RectTransform>();
+            borderRect.anchorMin = Vector2.zero;
+            borderRect.anchorMax = Vector2.one;
+            borderRect.offsetMin = Vector2.zero;
+            borderRect.offsetMax = Vector2.zero;
+            borderObject.transform.SetAsFirstSibling();
+
+            Image border = borderObject.GetComponent<Image>();
+            border.sprite = MobileUiTheme.ChamferedRectBorderSprite;
+            border.type = Image.Type.Sliced;
+            border.color = borderColor;
+            border.raycastTarget = false;
+
+            bool wasActive = root.activeSelf;
+            HudPanel panel = root.GetComponent<HudPanel>() ?? root.AddComponent<HudPanel>();
+            panel.ConfigurePresentation(background, border);
+            panel.SetImmediate(wasActive);
+            EditorUtility.SetDirty(panel);
         }
 
         private static void ConfigureSafeArea(Transform target)
@@ -472,11 +546,41 @@ namespace BeyondTheBeat.Editor
                    overlay.GetComponentsInChildren<Graphic>(true).All(graphic => !graphic.raycastTarget);
         }
 
-        private static void SetTextStyle(Text text, int size, FontStyle style, Color color)
+        private static bool HasHudPanel(Transform target)
         {
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            if (target == null)
+            {
+                return false;
+            }
+
+            HudPanel panel = target.GetComponent<HudPanel>();
+            Image border = target.Find(BorderName)?.GetComponent<Image>();
+            return panel != null &&
+                   panel.TransitionDuration >= 0.15f &&
+                   panel.TransitionDuration <= 0.25f &&
+                   border != null &&
+                   border.sprite != null &&
+                   !border.raycastTarget;
+        }
+
+        private static void SetTextStyle(TMP_Text text, int size, FontStyle style, Color color)
+        {
             text.fontSize = size;
-            text.fontStyle = style;
+            switch (style)
+            {
+                case FontStyle.Bold:
+                    text.fontStyle = FontStyles.Bold;
+                    break;
+                case FontStyle.Italic:
+                    text.fontStyle = FontStyles.Italic;
+                    break;
+                case FontStyle.BoldAndItalic:
+                    text.fontStyle = FontStyles.Bold | FontStyles.Italic;
+                    break;
+                default:
+                    text.fontStyle = FontStyles.Normal;
+                    break;
+            }
             text.color = color;
             text.raycastTarget = false;
         }
