@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,16 +9,16 @@ namespace BeyondTheBeat.Tutorial
     {
         [SerializeField] private TutorialController controller;
         [SerializeField] private GameObject panel;
-        [SerializeField] private Text titleText;
-        [SerializeField] private Text instructionText;
-        [SerializeField] private Text progressText;
+        [SerializeField] private TMP_Text titleText;
+        [SerializeField] private TMP_Text instructionText;
+        [SerializeField] private TMP_Text progressText;
         [SerializeField] private Button skipButton;
 
         public TutorialController Controller => controller;
         public GameObject Panel => panel;
-        public Text TitleText => titleText;
-        public Text InstructionText => instructionText;
-        public Text ProgressText => progressText;
+        public TMP_Text TitleText => titleText;
+        public TMP_Text InstructionText => instructionText;
+        public TMP_Text ProgressText => progressText;
         public Button SkipButton => skipButton;
 
         private void OnEnable()
@@ -48,9 +49,9 @@ namespace BeyondTheBeat.Tutorial
         public void Configure(
             TutorialController tutorialController,
             GameObject panelObject,
-            Text title,
-            Text instruction,
-            Text progress,
+            TMP_Text title,
+            TMP_Text instruction,
+            TMP_Text progress,
             Button skip)
         {
             if (isActiveAndEnabled && controller != null)
