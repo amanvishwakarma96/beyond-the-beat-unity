@@ -261,14 +261,8 @@ namespace BeyondTheBeat.Editor
                             missionPass && panelPass && inputPass && layoutPass && inheritedPass && cameraPass &&
                             buildSettingsPass && docPass;
 
-                // Diagnostic logging for debugging
-                if (!tutorialPass)
-                {
-                    Debug.LogWarning($"[Phase6 Debug] Tutorial validation failed. tutorialHud={tutorialHud != null}, panel={tutorialHud?.Panel != null}, skipButton={tutorialHud?.SkipButton != null}");
-                }
-
                 message = pass
-                    ? "[Beyond The Beat] Phase 6 mobile HUD polish validation PASS: safe-area roots, TMP text, shared HudPanel transitions, chamfered/hairline presentation, distinct top regions, [...]"
+                    ? "[Beyond The Beat] Phase 6 mobile HUD polish validation PASS: safe-area roots, TMP text, shared HudPanel transitions, chamfered/hairline presentation, distinct top regions, input handlers, and asset pipeline."
                     : "[Beyond The Beat] Phase 6 mobile HUD polish validation FAIL: " +
                       $"structure={structurePass}, safeArea={safeAreaPass}, mechanic={mechanicPass}, tutorial={tutorialPass}, " +
                       $"performance={performancePass}, mission={missionPass}, panels={panelPass}, input={inputPass}, " +
@@ -371,7 +365,7 @@ namespace BeyondTheBeat.Editor
             Image background = hud.Panel.GetComponent<Image>();
             if (background == null)
             {
-                throw new InvalidOperationException("Tutorial panel is missing its Image background.");
+                background = hud.Panel.AddComponent<Image>();
             }
             background.sprite = MobileUiTheme.ChamferedRectSprite;
             background.type = Image.Type.Sliced;
@@ -392,12 +386,11 @@ namespace BeyondTheBeat.Editor
             Image skipImage = hud.SkipButton.GetComponent<Image>();
             if (skipImage == null)
             {
-                throw new InvalidOperationException("Tutorial Skip button is missing Image.");
+                skipImage = hud.SkipButton.gameObject.AddComponent<Image>();
             }
             skipImage.sprite = MobileUiTheme.RoundedRectSprite;
             skipImage.type = Image.Type.Sliced;
             skipImage.color = MobileUiTheme.Amber;
-            skipImage.raycastTarget = true;
             hud.SkipButton.targetGraphic = skipImage;
 
             TMP_Text skipLabel = hud.SkipButton.GetComponentInChildren<TMP_Text>(true);
@@ -406,14 +399,14 @@ namespace BeyondTheBeat.Editor
                 SetTextStyle(skipLabel, 16, FontStyle.Bold, MobileUiTheme.Ink);
             }
 
-            // Ensure all non-skip graphics have raycastTarget = false
-            foreach (Graphic graphic in hud.Panel.GetComponentsInChildren<Graphic>(true))
+            // Tutorial presentation must not intercept gameplay input.
+            // Only the actual Skip button may receive raycasts.
+            Graphic[] tutorialGraphics = hud.Panel.GetComponentsInChildren<Graphic>(true);
+            for (int i = 0; i < tutorialGraphics.Length; i++)
             {
-                if (!ReferenceEquals(graphic, skipImage))
-                {
-                    graphic.raycastTarget = false;
-                }
+                tutorialGraphics[i].raycastTarget = ReferenceEquals(tutorialGraphics[i], skipImage);
             }
+            skipImage.raycastTarget = true;
         }
 
         private static void PolishPerformanceOverlay(PerformanceDiagnosticsOverlay overlay)
@@ -528,7 +521,6 @@ namespace BeyondTheBeat.Editor
         {
             if (hud == null || hud.Panel == null || hud.SkipButton == null)
             {
-                Debug.LogWarning($"[Phase6 Debug] Tutorial HUD missing components: hud={hud}, panel={hud?.Panel}, skipButton={hud?.SkipButton}");
                 return false;
             }
 
@@ -537,11 +529,11 @@ namespace BeyondTheBeat.Editor
             Image background = hud.Panel.GetComponent<Image>();
             Image skipImage = hud.SkipButton.GetComponent<Image>();
 
-            bool posApprox = Approximately(panelRect.anchoredPosition, TutorialPosition);
-            bool sizeApprox = Approximately(panelRect.sizeDelta, TutorialSize);
-            bool skipSizeValid = skipRect.sizeDelta.x >= 104f && skipRect.sizeDelta.y >= 48f;
-            bool backgroundValid = background != null && background.sprite != null && background.type == Image.Type.Sliced;
-            bool skipImageValid = skipImage != null && skipImage.sprite != null;
+            bool positionPass = Approximately(panelRect.anchoredPosition, TutorialPosition);
+            bool panelSizePass = Approximately(panelRect.sizeDelta, TutorialSize);
+            bool skipSizePass = skipRect.sizeDelta.x >= 104f && skipRect.sizeDelta.y >= 48f;
+            bool backgroundPass = background != null && background.sprite != null && background.type == Image.Type.Sliced;
+            bool skipImagePass = skipImage != null && skipImage.sprite != null;
 
             bool raycastPass = hud.Panel.GetComponentsInChildren<Graphic>(true).All(graphic =>
             {
@@ -549,12 +541,17 @@ namespace BeyondTheBeat.Editor
                 return graphic.raycastTarget == shouldRaycast;
             });
 
-            if (!posApprox || !sizeApprox || !skipSizeValid || !backgroundValid || !skipImageValid || !raycastPass)
+            bool pass = positionPass && panelSizePass && skipSizePass && backgroundPass && skipImagePass && raycastPass;
+
+            if (!pass)
             {
-                Debug.LogWarning($"[Phase6 Debug] Tutorial validation checks: posApprox={posApprox}, sizeApprox={sizeApprox}, skipSizeValid={skipSizeValid}, backgroundValid={backgroundValid}, skipImageValid={skipImageValid}, raycastPass={raycastPass}");
+                Debug.LogWarning(
+                    $"[Phase6 Debug] Tutorial HUD validation failed: " +
+                    $"positionPass={positionPass}, panelSizePass={panelSizePass}, skipSizePass={skipSizePass}, " +
+                    $"backgroundPass={backgroundPass}, skipImagePass={skipImagePass}, raycastPass={raycastPass}");
             }
 
-            return posApprox && sizeApprox && skipSizeValid && backgroundValid && skipImageValid && raycastPass;
+            return pass;
         }
 
         private static bool ValidatePerformanceOverlay(PerformanceDiagnosticsOverlay overlay)
